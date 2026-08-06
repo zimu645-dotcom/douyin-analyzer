@@ -60,6 +60,13 @@ def _ytdlp_path():
     return found if found else "yt-dlp"
 
 
+def _ffmpeg_location():
+    """定位 ffmpeg 目录：优先项目根（ffmpeg.exe 随项目携带，最稳），否则 None（走系统 PATH）"""
+    if os.path.exists(os.path.join(BASE, "ffmpeg.exe")):
+        return BASE
+    return None
+
+
 def download_audio(video_id, title_hint=""):
     """下载单个视频音频 → app_output/audio/<id>.m4a，返回 (ok, api_title, duration)"""
     # 已下载过则跳过（批量预下载后 process_one 复用，避免重复下载）
@@ -72,6 +79,10 @@ def download_audio(video_id, title_hint=""):
            "--print", "after_move:__TITLE__%(title)s",
            "--print", "after_move:__DURATION__%(duration_string)s",
            "--no-warnings", "--quiet", f"https://www.douyin.com/video/{video_id}"]
+    # 项目根带 ffmpeg 时显式指定，避免依赖系统 PATH
+    _ff = _ffmpeg_location()
+    if _ff:
+        cmd = cmd[:1] + ["--ffmpeg-location", _ff] + cmd[1:]
     # Windows 下 yt-dlp 可能输出 GBK 编码，需要智能解码
     r = subprocess.run(cmd, capture_output=True, timeout=300)
     api_title, duration = title_hint, ""

@@ -149,10 +149,14 @@ def analyze_video(video_id, duration):
         t += frame_interval
 
     results = []
+    # 优先用项目根自带 ffmpeg，否则系统 PATH
+    _ffmpeg = os.path.join(BASE, "ffmpeg.exe")
+    if not os.path.exists(_ffmpeg):
+        _ffmpeg = "ffmpeg"
     for i, t in enumerate(times):
         img = os.path.join(frames_dir, f"frame_{i:02d}_{t:03d}s.jpg")
         fr = subprocess.run(
-            ["ffmpeg", "-y", "-v", "error", "-ss", str(t), "-i", vid_path,
+            [_ffmpeg, "-y", "-v", "error", "-ss", str(t), "-i", vid_path,
              "-frames:v", "1", "-q:v", "3", img],
             capture_output=True, timeout=60)
         if fr.returncode == 0 and os.path.exists(img) and os.path.getsize(img) > 500:
