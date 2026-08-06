@@ -1779,9 +1779,13 @@ setInterval(function() {
 }, 5000);
 
 // 页面关闭前通知服务端：3 秒后停止服务（刷新时新页面会立即发心跳取消）
-window.addEventListener('beforeunload', function() {
-  try { navigator.sendBeacon('/api/page-closing'); } catch(e) {}
-});
+// beforeunload + pagehide 双事件、sendBeacon + fetch(keepalive) 双通道，最大化关闭信号可靠性
+function _notifyPageClosing() {
+  try { navigator.sendBeacon('/api/page-closing'); } catch (e) {}
+  try { fetch('/api/page-closing', { method: 'POST', keepalive: true }).catch(function(){}); } catch (e) {}
+}
+window.addEventListener('beforeunload', _notifyPageClosing);
+window.addEventListener('pagehide', _notifyPageClosing);
 
 // 页面加载立即心跳一次：取消刷新前的待定停止，保证刷新不误停服务
 try { fetch('/api/heartbeat', {method: 'GET', cache: 'no-store'}).catch(function(){}); } catch(e) {}
