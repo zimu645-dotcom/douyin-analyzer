@@ -30,3 +30,6 @@ scripts/
 vision_test.png
 exporters.py.bak
 *.bak
+
+# ===== Playwright 浏览器（运行时下载，体积大，不提交） =====
+browsers/

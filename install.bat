@@ -4,8 +4,13 @@ cd /d %~dp0
 
 echo ============================================
 echo   Douyin Video Analyzer - Auto Install
-echo   It will setup everything automatically.
 echo ============================================
+echo   Install location : %CD%
+echo   This project is portable. You can put this
+echo   folder on ANY drive (C/D/E...), everything
+echo   installs into this folder.
+echo.
+set "PLAYWRIGHT_BROWSERS_PATH=%~dp0browsers"
 
 REM ===== 1. Check / Auto-install Python =====
 python --version >nul 2>&1
@@ -37,8 +42,8 @@ REM ===== 3. Install dependencies =====
 echo [3/5] Installing dependencies (may take a few minutes)...
 pip install -r requirements.txt
 
-REM ===== 4. Install Chromium =====
-echo [4/5] Installing Chromium browser...
+REM ===== 4. Install Chromium (into project folder) =====
+echo [4/5] Installing Chromium browser (into project\browsers)...
 python -m playwright install chromium
 
 REM ===== 5. Download whisper model =====

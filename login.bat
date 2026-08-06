@@ -1,6 +1,7 @@
 @echo off
 title Douyin Analyzer - Login
 cd /d %~dp0
+set "PLAYWRIGHT_BROWSERS_PATH=%~dp0browsers"
 
 echo ============================================
 echo   Douyin Login

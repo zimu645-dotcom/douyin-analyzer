@@ -1,5 +1,6 @@
 @echo off
 cd /d %~dp0app
+set "PLAYWRIGHT_BROWSERS_PATH=%~dp0browsers"
 echo ============================================
 echo   Douyin Analyzer Service
 echo   URL : http://127.0.0.1:8321
