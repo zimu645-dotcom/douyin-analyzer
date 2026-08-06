@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抖音视频拆解报告</title>
+<style>
+/* ===== CSS 变量（亮色主题） ===== */
+:root {
+  --primary: #165dff; --primary-dark: #0e4fd6; --primary-light: #eef3ff;
+  --success: #00b42a; --warning: #ff7d00; --purple: #722ed1;
+  --text: #1f2329; --text-2: #4e5969; --text-3: #86909c;
+  --border: #e5e6eb; --bg: #f0f2f7; --card: #ffffff;
+  --radius: 14px; --shadow: 0 2px 16px rgba(0,0,0,.06);
+  --code-bg: #1f2329; --code-text: #e8e8e8;
+  --skeleton-from: #f0f2f7; --skeleton-to: #e5e6eb;
+}
+
+/* ===== 深色模式 ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e8e8; --text-2: #b0b4ba; --text-3: #6b7280;
+    --border: #2d3139; --bg: #141517; --card: #1e2025;
+    --primary-light: #1a2744; --shadow: 0 2px 16px rgba(0,0,0,.3);
+    --code-bg: #0d0f12; --code-text: #d4d4d4;
+    --skeleton-from: #1e2025; --skeleton-to: #2d3139;
+  }
+  .header { box-shadow: 0 4px 20px rgba(0,0,0,.4) !important; }
+  .input-card, .report-card, .history-card { border-color: var(--border) !important; }
+  .section-head:hover { background: #252830 !important; }
+  .seg-line:hover { background: #252830 !important; }
+  .seg-line.active { background: #1a2744 !important; }
+  .ov-card { background: #252830 !important; border-color: #2d3139 !important; }
+  .ver-block .ver-text { background: #252830 !important; }
+  .hook-list li { background: #252830 !important; border-color: #2d3139 !important; }
+  .stat-pill { background: #252830 !important; border-color: #2d3139 !important; }
+  .cfg-row input { background: #252830 !important; border-color: #2d3139 !important; color: var(--text) !important; }
+  .modal { background: #1e2025 !important; }
+  .modal-head { background: #1e2025 !important; border-color: #2d3139 !important; }
+  .cfg-section h4 { color: #5b8def !important; border-color: #5b8def !important; }
+  .cfg-tip { background: #252830 !important; }
+  .hist-table th { background: #252830 !important; }
+  .hist-table td { border-color: #2d3139 !important; }
+  table th { background: #252830 !important; }
+  table td { border-color: #2d3139 !important; }
+  .drop-zone { border-color: #2d3139 !important; color: var(--text-3) !important; }
+  .drop-zone:hover { background: #1a2744 !important; }
+  .btn.ghost { background: transparent !important; }
+  .prompt-box { background: #0d0f12 !important; }
+  .status-banner.idle { background: var(--card) !important; }
+  .empty-tip .e-dot { background: #3d4150 !important; }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; background: var(--bg); color: var(--text); transition: background .3s, color .3s; }
+
+/* ===== 顶栏 ===== */
+.header { background: linear-gradient(135deg, #165dff 0%, #7b2ff7 100%); color: #fff; padding: 16px 30px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(22,93,255,.25); }
+.header-left { display: flex; align-items: center; gap: 14px; }
+.logo { width: 40px; height: 40px; background: rgba(255,255,255,.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.header h1 { font-size: 19px; font-weight: 700; }
+.header .sub { font-size: 12px; opacity: .85; margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.status-pill { font-size: 12px; background: rgba(255,255,255,.15); padding: 6px 14px; border-radius: 20px; }
+.status-pill.btn-pill { cursor: pointer; transition: all .2s; }
+.status-pill.btn-pill:hover { background: rgba(255,255,255,.3); }
+.view-tabs { display: flex; gap: 6px; }
+.view-tab { padding: 6px 16px; border-radius: 18px; border: none; background: rgba(255,255,255,.15); color: #fff; cursor: pointer; font-size: 13px; transition: all .2s; }
+.view-tab.active { background: #fff; color: var(--primary); font-weight: 600; }
+
+.container { max-width: 1100px; margin: 22px auto; padding: 0 22px; }
+
+/* ===== 顶部整体进度条 ===== */
+.global-progress { height: 6px; background: rgba(255,255,255,.2); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+.global-progress .gp-bar { height: 100%; background: linear-gradient(90deg, #00e5ff, #7bff9b); border-radius: 3px; transition: width .5s ease; width: 0; }
+.hidden { display: none !important; }
+
+/* ===== 输入卡 ===== */
+.input-card { background: var(--card); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); margin-bottom: 22px; border: 1px solid rgba(0,0,0,.03); transition: background .3s, border-color .3s; }
+.input-card h2 { font-size: 15px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.tab-bar { display: flex; gap: 8px; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+.tab-btn { padding: 7px 18px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 13px; color: var(--text-2); transition: all .2s; }
+.tab-btn:hover { border-color: var(--primary); color: var(--primary); }
+.tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 2px 8px rgba(22,93,255,.3); }
+.input-row { display: flex; gap: 10px; }
+.input-row input[type=text] { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; transition: all .2s; background: var(--card); color: var(--text); }
+.input-row input[type=text]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(22,93,255,.1); }
+.input-row input[type=number] { width: 90px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; background: var(--card); color: var(--text); }
+.btn { padding: 11px 24px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 14px; cursor: pointer; transition: all .2s; font-weight: 500; white-space: nowrap; }
+.btn:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(22,93,255,.3); }
+.btn.ghost { background: var(--card); color: var(--primary); border: 1px solid var(--primary); }
+.btn.ghost:hover { background: var(--primary-light); box-shadow: none; transform: none; }
+.btn.sm { padding: 5px 12px; font-size: 12px; border-radius: 8px; }
+.drop-zone { border: 2px dashed #c9cdd4; border-radius: 12px; padding: 32px; text-align: center; color: var(--text-3); font-size: 14px; cursor: pointer; transition: all .2s; }
+.drop-zone:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+/* ===== 状态横幅 ===== */
+.status-banner { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: var(--radius); margin-bottom: 18px; font-size: 14px; font-weight: 500; flex-wrap: wrap; }
+.status-banner.idle { background: var(--card); color: var(--text-2); box-shadow: var(--shadow); }
+.status-banner.running { background: linear-gradient(135deg, #eef3ff, #f3e8ff); color: var(--primary); box-shadow: 0 2px 12px rgba(22,93,255,.15); }
+@media (prefers-color-scheme: dark) {
+  .status-banner.running { background: linear-gradient(135deg, #1a2744, #251a3d); }
+}
+.pulse-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pulse-dot.idle { background: #c9cdd4; }
+.pulse-dot.running { background: var(--primary); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.8); } }
+.banner-msg { flex: 1; }
+.banner-progress { font-size: 12px; color: var(--text-3); font-weight: 400; }
+
+/* ===== 报告卡（流式工作台） ===== */
+.report-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border: 1px solid rgba(0,0,0,.03); transition: background .3s; }
+.report-head { padding: 20px 26px; background: linear-gradient(135deg, #f8faff 0%, var(--card) 60%); border-bottom: 1px solid var(--border); transition: background .3s; }
+.report-head h3 { font-size: 17px; line-height: 1.6; }
+.report-head .meta { font-size: 12px; color: var(--text-3); margin-top: 6px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; background: var(--primary-light); color: var(--primary); font-weight: 500; }
+.stats-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.stat-pill { display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; background: #fafafa; border: 1px solid var(--border); animation: popIn .3s ease; }
+.author-row { margin-top: 6px; font-size: 12px; color: var(--text-2); }
+@keyframes popIn { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
+.export-bar { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.head-progress { margin-top: 14px; height: 8px; background: #f0f2f7; border-radius: 4px; overflow: hidden; }
+.head-progress .hp-bar { height: 100%; border-radius: 4px; transition: width .6s ease; background: linear-gradient(90deg, #165dff, #7b2ff7, #00e5ff); background-size: 200% 100%; animation: slide 2s linear infinite; }
+@keyframes slide { to { background-position: -200% 0; } }
+
+/* ===== 子任务进度条 ===== */
+.sub-tasks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.sub-task { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-3); background: #f5f6f8; padding: 4px 10px; border-radius: 12px; transition: all .3s; }
+.sub-task.active { background: var(--primary-light); color: var(--primary); }
+.sub-task.done { background: #e8fff1; color: var(--success); }
+.sub-task .st-dot { width: 6px; height: 6px; border-radius: 50%; background: #d9dce2; transition: background .3s; }
+.sub-task.active .st-dot { background: var(--primary); animation: pulse 1s infinite; }
+.sub-task.done .st-dot { background: var(--success); }
+.sub-task .st-time { font-size: 10px; opacity: .7; }
+
+/* ===== 板块 ===== */
+.section { border-bottom: 1px solid #f5f6f8; }
+.section:last-child { border-bottom: none; }
+.section-head { display: flex; justify-content: space-between; align-items: center; padding: 15px 26px; cursor: pointer; user-select: none; transition: background .2s; }
+.section-head:hover { background: #fafbfe; }
+.section-head h4 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.sec-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: transform .3s; }
+.section:hover .sec-icon { transform: scale(1.1); }
+.sec-icon.i0 { background: #eef3ff; } .sec-icon.i1 { background: #fff7e8; } .sec-icon.i2 { background: #fff1f0; }
+.sec-icon.i3 { background: #f3e8ff; } .sec-icon.i4 { background: #e8fff1; } .sec-icon.i5 { background: #fff7e8; }
+.sec-icon.i6 { background: #e6f7ff; }
+.arrow { display: inline-block; transition: transform .3s; color: var(--text-3); font-size: 12px; }
+.section.open .arrow { transform: rotate(90deg); }
+.sec-status { font-size: 11px; padding: 3px 10px; border-radius: 12px; background: #f5f6f8; color: var(--text-3); transition: all .3s; display: inline-flex; align-items: center; gap: 5px; }
+.sec-status.loading { background: var(--primary-light); color: var(--primary); animation: pulse 1.2s infinite; }
+.sec-status.done { background: #e8fff1; color: var(--success); }
+.sec-time { font-size: 10px; color: var(--text-3); margin-left: 6px; font-weight: 400; }
+.copy-btn { font-size: 12px; color: var(--primary); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background .2s; }
+.copy-btn:hover { background: var(--primary-light); }
+.sec-body { display: none; padding: 4px 26px 20px; font-size: 14px; line-height: 1.8; color: var(--text); }
+.section.open .sec-body { display: block; animation: fadeUp .35s ease; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.sec-body.empty { color: var(--text-3); font-size: 13px; padding: 10px 26px 18px; }
+.empty-tip { display: flex; align-items: center; gap: 8px; color: var(--text-3); }
+.empty-tip .e-dot { width: 6px; height: 6px; border-radius: 50%; background: #d9dce2; }
+.seg-line { margin-bottom: 7px; padding: 5px 10px; border-radius: 6px; animation: fadeUp .3s ease; transition: background .2s; }
+.seg-line:hover { background: #f8f9fc; }
+.seg-line.active { background: #eef3ff; border-left: 3px solid var(--primary); }
+.ts { color: var(--primary); font-weight: 600; margin-right: 8px; font-size: 13px; }
+.ts.green { color: var(--success); }
+
+/* ===== 骨架屏 shimmer ===== */
+.skeleton-line { height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--skeleton-from) 25%, var(--skeleton-to) 50%, var(--skeleton-from) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; margin-bottom: 10px; }
+.skeleton-line.short { width: 60%; }
+.skeleton-line.medium { width: 80%; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ===== 打字光标 ===== */
+.type-caret { display: inline-block; width: 2px; height: 16px; background: var(--primary); vertical-align: middle; margin-left: 2px; animation: blink .8s infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+.type-src { font-family: inherit; font-size: 13px; line-height: 1.9; white-space: pre-wrap; word-break: break-all; color: var(--text); }
+
+/* ===== 流式文本分段渲染 ===== */
+.stream-chunk { animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ===== 总览三卡 ===== */
+.overview-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.ov-card { background: #fafbfe; border-radius: 10px; padding: 12px 14px; border: 1px solid #f0f1f5; animation: fadeUp .4s ease; transition: transform .2s, box-shadow .2s; }
+.ov-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+.ov-card .ov-label { font-size: 12px; color: var(--text-3); margin-bottom: 5px; }
+.ov-card .ov-val { font-size: 13px; line-height: 1.7; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #f7f8fa; text-align: left; padding: 9px 12px; font-weight: 600; border: 1px solid var(--border); }
+td { padding: 9px 12px; border: 1px solid var(--border); vertical-align: top; line-height: 1.7; }
+
+/* ===== 版本卡片 ===== */
+.ver-block { margin-bottom: 14px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); animation: fadeUp .4s ease; transition: transform .2s, box-shadow .2s; }
+.ver-block:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+.ver-block h5 { font-size: 13px; padding: 11px 16px; color: #fff; }
+.ver-block .ver-text { background: #fafafa; padding: 14px 16px; white-space: pre-wrap; font-size: 13px; line-height: 2; }
+.ver-block.v0 h5 { background: linear-gradient(90deg, #165dff, #4d8dff); } .ver-block.v0 .ver-text { border-left: 3px solid #165dff; }
+.ver-block.v1 h5 { background: linear-gradient(90deg, #722ed1, #9d5fe8); } .ver-block.v1 .ver-text { border-left: 3px solid #722ed1; }
+.ver-block.v2 h5 { background: linear-gradient(90deg, #00b42a, #3fd65f); } .ver-block.v2 .ver-text { border-left: 3px solid #00b42a; }
+.ver-block.v3 h5 { background: linear-gradient(90deg, #c05000, #e8733a); } .ver-block.v3 .ver-text { border-left: 3px solid #c05000; }
+.hook-list { list-style: none; padding: 12px 16px; }
+.hook-list li { margin-bottom: 8px; padding: 9px 12px; background: #fff; border: 1px solid #f0f1f5; border-radius: 8px; font-size: 13px; animation: fadeUp .3s ease; }
+.hook-list li::before { content: "🎯 "; }
+.prompt-box { background: #1f2329; color: #e8e8e8; border-radius: 10px; padding: 16px; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
+
+/* ===== 画面分析 ===== */
+.vision-block { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.vision-item { background: #fafbfe; border: 1px solid #f0f1f5; border-radius: 10px; padding: 12px; animation: fadeUp .4s ease; transition: transform .2s; }
+.vision-item:hover { transform: translateY(-2px); }
+.vision-item .v-img { width: 100%; border-radius: 8px; margin-bottom: 8px; display: block; border: 1px solid var(--border); }
+.vision-item .v-time { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 6px; }
+.vision-item .v-text { font-size: 13px; line-height: 1.7; }
+
+/* ===== 历史记录 ===== */
+.history-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; transition: background .3s; }
+.history-card h3 { font-size: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.hist-table td { font-size: 12px; }
+.hist-title { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-actions { display: flex; gap: 4px; }
+.hist-actions .btn { padding: 3px 8px; font-size: 11px; border-radius: 6px; }
+
+.empty { text-align: center; color: var(--text-3); padding: 60px 20px; font-size: 14px; }
+.loading { text-align: center; padding: 50px; color: var(--text-3); }
+.spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.footer { text-align: center; color: var(--text-3); font-size: 12px; padding: 26px 0 34px; }
+
+/* ===== 设置弹窗 ===== */
+.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.modal { background: #fff; border-radius: 14px; width: 640px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.modal-head { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: #fff; z-index: 1; }
+.modal-body { padding: 18px 24px 24px; }
+.cfg-section { margin-bottom: 20px; }
+.cfg-section h4 { font-size: 14px; margin-bottom: 10px; color: var(--primary); border-left: 3px solid var(--primary); padding-left: 10px; }
+.cfg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cfg-row label { width: 130px; font-size: 12px; color: var(--text-2); flex-shrink: 0; text-align: right; }
+.cfg-row input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; outline: none; }
+.cfg-actions { display: flex; gap: 10px; margin-top: 16px; }
+.cfg-tip { margin-top: 12px; font-size: 12px; color: var(--text-3); background: #f7f8fa; padding: 10px 14px; border-radius: 8px; }
+
+/* ===== 响应式（移动端） ===== */
+@media (max-width: 768px) {
+  .header { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 16px; }
+  .header-right { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+  .container { padding: 0 12px; }
+  .input-card { padding: 16px; }
+  .input-row { flex-direction: column; }
+  .input-row input[type=text] { width: 100%; }
+  .input-row input[type=number] { width: 100%; }
+  .tab-bar { flex-wrap: wrap; }
+  .overview-grid { grid-template-columns: 1fr; }
+  .vision-block { grid-template-columns: 1fr; }
+  .report-head { padding: 16px; }
+  .section-head { padding: 12px 16px; }
+  .sec-body { padding: 4px 16px 16px; }
+  .stats-row { gap: 4px; }
+  .stat-pill { font-size: 11px; padding: 3px 8px; }
+  .modal { width: 95%; margin: 0 auto; }
+  .cfg-row { flex-direction: column; align-items: stretch; }
+  .cfg-row label { width: auto; text-align: left; }
+  .hist-table { font-size: 11px; }
+  .hist-title { max-width: 120px; }
+  .sub-tasks { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo">🎬</div>
+    <div>
+      <h1>抖音视频拆解报告</h1>
+      <div class="sub">下载 → 转写 → AI 改写 → 深度分析 → 一键导出</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="view-tabs">
+      <button class="view-tab active" id="vt-reports" onclick="switchView('reports')">📊 实时分析</button>
+      <button class="view-tab" id="vt-history" onclick="switchView('history')">🗂 分析记录</button>
+    </div>
+    <button class="status-pill btn-pill" onclick="openSettings()" title="大模型配置">⚙️ 模型配置</button>
+    <span class="status-pill" id="svc-status">就绪</span>
+  </div>
+</div>
+<div class="container">
+
+  <!-- 输入卡 -->
+  <div class="input-card">
+    <h2>📥 发起拆解任务</h2>
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="author" onclick="switchTab('author')">博主主页批量</button>
+      <button class="tab-btn" data-tab="single" onclick="switchTab('single')">单个视频链接</button>
+      <button class="tab-btn" data-tab="local" onclick="switchTab('local')">本地音频文件</button>
+    </div>
+    <div id="tab-author">
+      <div class="input-row">
+        <input type="text" id="author-url" placeholder="粘贴抖音博主主页链接，如 https://www.douyin.com/user/xxx">
+        <input type="number" id="author-count" value="5" min="1" max="50" title="提取视频数量">
+        <button class="btn" onclick="startAuthor()">🚀 开始拆解</button>
+      </div>
+    </div>
+    <div id="tab-single" class="hidden">
+      <div class="input-row">
+        <input type="text" id="single-url" placeholder="粘贴抖音视频链接，如 https://www.douyin.com/video/123456">
+        <button class="btn" onclick="startSingle()">🚀 开始拆解</button>
+      </div>
+    </div>
+    <div id="tab-local" class="hidden">
+      <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+        📂 点击选择或拖入本地音频文件（mp3 / wav / m4a / mp4）
+      </div>
+      <input type="file" id="file-input" accept="audio/*,.mp3,.wav,.m4a,.mp4" class="hidden" onchange="uploadFile(this)">
+    </div>
+    <div class="input-row" style="margin-top:10px;flex-wrap:wrap;gap:10px;align-items:center">
+      <span style="font-size:13px;color:var(--text-3);white-space:nowrap">⚙️ 生成模块：</span>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-3);cursor:pointer">
+        <input type="checkbox" id="mod-analysis" style="width:16px;height:16px">AI 分析</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-3);cursor:pointer">
+        <input type="checkbox" id="mod-rewrite" style="width:16px;height:16px">润色改写</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-3);cursor:pointer">
+        <input type="checkbox" id="mod-versions" style="width:16px;height:16px">多版本仿写</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-3);cursor:pointer" title="勾选后下载视频做画面分析（慢）">
+        <input type="checkbox" id="mod-vision" style="width:16px;height:16px">画面分析</label>
+    </div>
+  </div>
+
+  <!-- 状态横幅 -->
+  <div class="status-banner idle" id="status-banner">
+    <span class="pulse-dot idle" id="banner-dot"></span>
+    <span class="banner-msg" id="banner-msg">空闲中 · 粘贴链接或上传音频开始拆解</span>
+    <span class="banner-progress" id="banner-progress"></span>
+    <button class="btn sm" id="btn-stop" onclick="stopAnalysis()" style="display:none;background:#f53f3f;color:#fff">⏹ 停止拆解</button>
+    <div class="global-progress" style="flex-basis:100%;margin-top:8px"><div class="gp-bar" id="gp-bar"></div></div>
+  </div>
+
+  <!-- 实时工作台 -->
+  <div id="view-reports">
+    <div id="workbench"></div>
+  </div>
+
+  <!-- 历史视图 -->
+  <div id="view-history" class="hidden">
+    <div class="history-card">
+      <h3>🗂 分析记录（历史备份，随时查看）</h3>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <div class="footer">抖音视频拆解报告 · 本地服务 · 实时流式输出</div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="modal-mask hidden" id="settings-modal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>⚙️ 大模型配置</h3>
+      <button class="copy-btn" onclick="closeSettings()">✕ 关闭</button>
+    </div>
+    <div class="modal-body">
+      <div class="cfg-section">
+        <h4>✍️ 改写引擎（主）</h4>
+        <div class="cfg-row"><label>服务商</label><input id="cfg-p-provider" placeholder="deepseek / mimo / 自定义"></div>
+        <div class="cfg-row"><label>Base URL</label><input id="cfg-p-url" placeholder="https://api.deepseek.com/chat/completions"></div>
+        <div class="cfg-row"><label>模型名</label><input id="cfg-p-model" list="model-list-deepseek" placeholder="deepseek-v4-flash" style="flex:1">
+          <datalist id="model-list-deepseek">
+            <option value="deepseek-v4-flash"><option value="deepseek-chat"><option value="deepseek-reasoner"><option value="deepseek-v3.1">
+          </datalist></div>
+        <div class="cfg-row"><label>API Key</label><input id="cfg-p-keyfile" type="password" placeholder="sk-xxx（留空则不修改）" autocomplete="off"></div>
+      </div>
+      <div class="cfg-section">
+        <h4>🛡 改写引擎（兜底）</h4>
+        <div class="cfg-row"><label>服务商</label><input id="cfg-f-provider" placeholder="mimo"></div>
+        <div class="cfg-row"><label>Base URL</label><input id="cfg-f-url" placeholder="https://api.xiaomimimo.com/v1/chat/completions"></div>
+        <div class="cfg-row"><label>模型名</label><input id="cfg-f-model" list="model-list-mimo" placeholder="mimo-v2.5" style="flex:1">
+          <datalist id="model-list-mimo">
+            <option value="mimo-v2.5"><option value="mimo-v2.6"><option value="mimo-v1.5">
+          </datalist></div>
+        <div class="cfg-row"><label>API Key</label><input id="cfg-f-keyfile" type="password" placeholder="sk-xxx（留空则不修改）" autocomplete="off"></div>
+      </div>
+      <div class="cfg-section">
+        <h4>🎬 视觉模型（画面分析）</h4>
+        <div class="cfg-row"><label>服务商</label><input id="cfg-v-provider" placeholder="mimo"></div>
+        <div class="cfg-row"><label>Base URL</label><input id="cfg-v-url" placeholder="https://api.xiaomimimo.com/v1/chat/completions"></div>
+        <div class="cfg-row"><label>模型名</label><input id="cfg-v-model" list="model-list-mimo" placeholder="mimo-v2.5" style="flex:1"></div>
+        <div class="cfg-row"><label>API Key</label><input id="cfg-v-keyfile" type="password" placeholder="sk-xxx（留空则不修改）" autocomplete="off"></div>
+        <div class="cfg-row"><label>抽帧间隔(秒)</label><input id="cfg-v-interval" type="number" min="1" max="30" value="5"></div>
+        <div class="cfg-row"><label>最大帧数</label><input id="cfg-v-maxframes" type="number" min="1" max="30" value="12"></div>
+        <div class="cfg-row"><label>启用画面分析</label><input id="cfg-v-enabled" type="checkbox" checked style="width:18px;height:18px;margin-left:8px"></div>
+      </div>
+      <div class="cfg-section">
+        <h4>📊 飞书多维表格</h4>
+        <div class="cfg-row"><label>App ID</label><input id="cfg-fs-appid" placeholder="飞书应用 App ID"></div>
+        <div class="cfg-row"><label>App Secret</label><input id="cfg-fs-appsecret" type="password" placeholder="飞书应用 App Secret"></div>
+        <div class="cfg-row"><label>多维表格 Token</label><input id="cfg-fs-apptoken" placeholder="从URL获取: feishu.cn/base/xxx"></div>
+        <div class="cfg-row"><label>数据表 ID</label><input id="cfg-fs-tableid" placeholder="从URL获取: ?table=xxx"></div>
+        <div class="cfg-row"><label>自动导出</label><input id="cfg-fs-auto" type="checkbox" style="width:18px;height:18px;margin-left:8px" title="分析完成后自动导出到飞书"></div>
+        <div class="cfg-tip">
+          <button class="btn sm" onclick="testFeishu()" style="margin-right:10px">🔗 测试连接</button>
+          <span id="feishu-test-result"></span>
+        </div>
+        <div class="cfg-tip">配置说明：在飞书开放平台创建应用，添加 bitable:app 权限。多维表格URL格式：https://xxx.feishu.cn/base/{app_token}?table={table_id}</div>
+      </div>
+      <div class="cfg-actions">
+        <button class="btn" onclick="saveSettings()">💾 保存配置</button>
+        <button class="btn ghost" onclick="closeSettings()">取消</button>
+      </div>
+      <div class="cfg-row" style="margin-top:6px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-3);cursor:pointer">
+          <input type="checkbox" id="cfg-remember-key" style="width:16px;height:16px">
+          长期保存 API Key（勾选后下次免填；不勾选则下次重新填写）
+        </label>
+      </div>
+      <div class="cfg-actions" style="margin-top:8px">
+        <button class="btn" style="background:#f53f3f;color:#fff" onclick="clearConfig()">🗑 清除配置（只删 API Key）</button>
+      </div>
+      <div class="cfg-tip">API Key 直接输入后保存；「清除配置」只删除 Key，模型名与服务器链接保留。</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentTab = 'author';
+let currentView = 'reports';
+let live = null;          // 当前分析视频的实时数据 {video_id, title, ...}
+let _recoveredFromLive = false;  // 标记：已从 /api/live 恢复，SSE 不要重置工作台
+let liveSeq = 0;          // 事件序号（保证渲染顺序）
+
+// ===== 流式渲染优化：requestAnimationFrame 批量合并 =====
+let _renderPending = false;
+let _pendingOps = [];     // 缓存高频渲染操作
+function scheduleRender(fn) {
+  _pendingOps.push(fn);
+  if (!_renderPending) {
+    _renderPending = true;
+    requestAnimationFrame(_flushRender);
+  }
+}
+function _flushRender() {
+  const ops = _pendingOps.splice(0);
+  _renderPending = false;
+  for (const op of ops) {
+    try { op(); } catch (e) { console.error('render error', e); }
+  }
+}
+
+// ===== 板块计时 =====
+const _secTimers = {};    // {key: startTime}
+function startSecTimer(key) { _secTimers[key] = performance.now(); }
+function getSecElapsed(key) {
+  if (!_secTimers[key]) return '';
+  const ms = performance.now() - _secTimers[key];
+  if (ms < 1000) return Math.round(ms) + 'ms';
+  return (ms / 1000).toFixed(1) + 's';
+}
+
+// ===== 子任务状态跟踪 =====
+const _subTasks = {
+  download: { label: '下载', status: 'pending', start: null, end: null },
+  transcribe: { label: '转写', status: 'pending', start: null, end: null },
+  rewrite: { label: '润色', status: 'pending', start: null, end: null },
+  analysis: { label: '分析', status: 'pending', start: null, end: null },
+  versions: { label: '仿写', status: 'pending', start: null, end: null },
+  stats: { label: '数据', status: 'pending', start: null, end: null },
+  vision: { label: '画面', status: 'pending', start: null, end: null },
+};
+
+function resetSubTasks() {
+  for (const k in _subTasks) {
+    _subTasks[k].status = 'pending';
+    _subTasks[k].start = null;
+    _subTasks[k].end = null;
+  }
+}
+
+function startSubTask(key) {
+  if (_subTasks[key]) {
+    _subTasks[key].status = 'active';
+    _subTasks[key].start = performance.now();
+  }
+}
+
+function doneSubTask(key) {
+  if (_subTasks[key]) {
+    _subTasks[key].status = 'done';
+    _subTasks[key].end = performance.now();
+  }
+}
+
+function getSubTaskTime(key) {
+  const t = _subTasks[key];
+  if (!t || !t.start) return '';
+  const end = t.end || performance.now();
+  const ms = end - t.start;
+  if (ms < 1000) return Math.round(ms) + 'ms';
+  return (ms / 1000).toFixed(1) + 's';
+}
+
+function renderSubTasks() {
+  const el = document.getElementById('sub-tasks');
+  if (!el) return;
+  let html = '';
+  for (const [k, t] of Object.entries(_subTasks)) {
+    const cls = t.status === 'active' ? 'active' : (t.status === 'done' ? 'done' : '');
+    const time = t.status === 'done' ? getSubTaskTime(k) : (t.status === 'active' ? '⏳' : '');
+    html += `<div class="sub-task ${cls}"><span class="st-dot"></span>${t.label}${time ? `<span class="st-time">${time}</span>` : ''}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ===== 板块骨架定义 =====
+const SECTIONS = [
+  {key: 'overview', icon: '📌', title: '一、视频总览'},
+  {key: 'learn', icon: '⭐', title: '二、值得学习'},
+  {key: 'original', icon: '📄', title: '三、原内容（转写）'},
+  {key: 'rewrite', icon: '✨', title: '四、润色改写'},
+  {key: 'vision', icon: '🎬', title: '五、画面分析'},
+  {key: 'versions', icon: '🎭', title: '六、多版本仿写'},
+];
+
+// ===== 视图切换 =====
+function switchView(v) {
+  currentView = v;
+  document.getElementById('vt-reports').classList.toggle('active', v === 'reports');
+  document.getElementById('vt-history').classList.toggle('active', v === 'history');
+  document.getElementById('view-reports').classList.toggle('hidden', v !== 'reports');
+  document.getElementById('view-history').classList.toggle('hidden', v !== 'history');
+  if (v === 'history') loadHistory();
+}
+
+// ===== 骨架渲染（含 shimmer 动画） =====
+function renderSkeleton() {
+  const wb = document.getElementById('workbench');
+  let html = `<div class="report-card">
+    <div class="report-head">
+      <h3 id="live-title">🎬 等待视频分析...</h3>
+      <div class="meta"><span id="live-meta">空闲状态 · 发起任务后实时显示</span></div>
+      <div class="stats-row" id="live-stats"></div>
+      <div class="export-bar hidden" id="live-exports"></div>
+      <div class="head-progress hidden" id="live-hp"><div class="hp-bar" id="live-hp-bar" style="width:0%"></div></div>
+      <div class="sub-tasks" id="sub-tasks"></div>
+    </div>`;
+  SECTIONS.forEach((s, i) => {
+    html += `<div class="section" data-sec="${s.key}">
+      <div class="section-head" onclick="toggleSec(this)">
+        <h4><span class="sec-icon i${i % 7}">${s.icon}</span> ${s.title} <span class="arrow">▶</span></h4>
+        <div class="right-btns">
+          <span class="sec-status" id="st-${s.key}">等待</span><span class="sec-time" id="tm-${s.key}"></span>
+          <button class="copy-btn hidden" id="cp-${s.key}" onclick="copySec(event,this)">复制内容</button>
+        </div>
+      </div>
+      <div class="sec-body empty" id="bd-${s.key}">
+        <div class="empty-tip"><span class="e-dot"></span><span id="tip-${s.key}">等待分析...</span></div>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  wb.innerHTML = html;
+  renderSubTasks();
+}
+
+// ===== 骨架屏占位 =====
+function showSkeletonLines(key, count) {
+  const bd = document.getElementById('bd-' + key);
+  if (!bd) return;
+  bd.classList.remove('empty');
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    const w = i % 3 === 0 ? 'short' : (i % 3 === 1 ? 'medium' : '');
+    html += `<div class="skeleton-line ${w}"></div>`;
+  }
+  bd.innerHTML = html;
+  const sec = bd.closest('.section');
+  if (sec && !sec.classList.contains('open')) sec.classList.add('open');
+}
+
+// ===== 板块内容填充（流式） =====
+function setSecStatus(key, status, label) {
+  scheduleRender(() => {
+    const el = document.getElementById('st-' + key);
+    if (el) { el.className = 'sec-status ' + status; el.textContent = label; }
+    // 计时：loading→done
+    if (status === 'loading') startSecTimer(key);
+    if (status === 'done') {
+      const tm = document.getElementById('tm-' + key);
+      if (tm) tm.textContent = getSecElapsed(key);
+    }
+  });
+}
+function setSecContent(key, html) {
+  scheduleRender(() => {
+    const bd = document.getElementById('bd-' + key);
+    if (!bd) return;
+    bd.classList.remove('empty');
+    bd.innerHTML = html;
+    const cp = document.getElementById('cp-' + key);
+    if (cp) cp.classList.remove('hidden');
+    setSecStatus(key, 'done', '✓ 完成');
+    const sec = bd.closest('.section');
+    if (sec && !sec.classList.contains('open')) sec.classList.add('open');
+  });
+}
+function setSecEmpty(key, tip) {
+  const bd = document.getElementById('bd-' + key);
+  if (bd) {
+    bd.classList.add('empty');
+    bd.innerHTML = `<div class="empty-tip"><span class="e-dot"></span><span>${tip || '等待分析...'}</span></div>`;
+  }
+}
+
+// ===== 流式渲染辅助 =====
+function appendSegment(secKey, seg) {
+  scheduleRender(() => {
+    const bd = document.getElementById('bd-' + secKey);
+    if (!bd) return;
+    bd.classList.remove('empty');
+    // 清除骨架占位文字（如"等待分析..."）
+    const emptyTip = bd.querySelector('.empty-tip');
+    if (emptyTip) emptyTip.remove();
+
+    // 移除之前的active状态
+    const prevActive = bd.querySelector('.seg-line.active');
+    if (prevActive) prevActive.classList.remove('active');
+
+    const div = document.createElement('div');
+    div.className = 'seg-line active';
+    div.innerHTML = `<span class="ts">[${fmtTs(seg.start)}]</span>${esc(seg.text)}`;
+    bd.appendChild(div);
+    const sec = bd.closest('.section');
+    if (sec && !sec.classList.contains('open')) sec.classList.add('open');
+    // 平滑滚动到最新
+    bd.scrollTo({ top: bd.scrollHeight, behavior: 'smooth' });
+  });
+}
+
+// 打字机缓冲：高频 token 先累积，节流后一次性渲染
+let _typeBuffers = {};    // {secKey: accumulatedText}
+let _typeChunkCount = {}; // 兼容保留（不再使用）
+let _typeLastRender = {}; // {secKey: lastRenderTime} 节流用
+const TYPEWRITE_INTERVAL = 60;   // 60ms 节流，多个 token 合并渲染，降低重排频率（防止狂闪）
+
+function typewriter(secKey, text) {
+  _typeBuffers[secKey] = text;
+  // 节流：60ms 内只渲染一次，避免每帧全量重写 DOM 导致狂闪
+  const now = performance.now();
+  if (now - (_typeLastRender[secKey] || 0) < TYPEWRITE_INTERVAL) return;
+  _typeLastRender[secKey] = now;
+  scheduleRender(() => {
+    const bd = document.getElementById('bd-' + secKey);
+    if (!bd) return;
+    bd.classList.remove('empty');
+    // 用 textContent 更新（比 innerHTML 快很多，不解析 HTML、不重建 DOM，减少闪烁）
+    bd.textContent = _typeBuffers[secKey] || text;
+    const sec = bd.closest('.section');
+    if (sec && !sec.classList.contains('open')) sec.classList.add('open');
+    bd.scrollTop = bd.scrollHeight;
+  });
+}
+
+function typewriterAppend(secKey, tok) {
+  // 增量追加：避免每次 token 字符串拼接 O(n²) 导致流式卡顿
+  _typeBuffers[secKey] = (_typeBuffers[secKey] || '') + tok;
+  const now = performance.now();
+  if (now - (_typeLastRender[secKey] || 0) < TYPEWRITE_INTERVAL) return;
+  _typeLastRender[secKey] = now;
+  scheduleRender(() => {
+    const bd = document.getElementById('bd-' + secKey);
+    if (!bd) return;
+    bd.classList.remove('empty');
+    bd.textContent = _typeBuffers[secKey] || '';
+    const sec = bd.closest('.section');
+    if (sec && !sec.classList.contains('open')) sec.classList.add('open');
+    bd.scrollTop = bd.scrollHeight;
+  });
+}
+
+// ===== SSE 实时流（含断线重连和状态恢复） =====
+let _sseRetry = 0;
+let _sseRetryTimer = null;
+let _sseConnected = false;
+let _lastEventTime = Date.now();  // 最后收到事件的时间
+let _sseHeartbeat = null;
+let _taskCompleted = false;  // 标记任务是否完成
+let _batchInfo = null;       // {index, total} 批量分析进度（博主主页）
+let _newTaskPending = false; // 新任务提交中：阻止 recoverState 恢复旧内容
+const SSE_MAX_RETRY = 30;  // 最大重试次数
+const SSE_BASE_DELAY = 1000;  // 基础重连延迟（毫秒）
+
+function connectSSE() {
+  // 清理之前的连接和定时器
+  if (window._sseAbort) { try { window._sseAbort.abort(); } catch (e) {} }
+  if (_sseRetryTimer) { clearTimeout(_sseRetryTimer); _sseRetryTimer = null; }
+  if (_sseHeartbeat) { clearInterval(_sseHeartbeat); _sseHeartbeat = null; }
+
+  // 使用 fetch + ReadableStream 替代 EventSource（更可靠，不依赖浏览器 SSE 实现）
+  var abortCtrl = new AbortController();
+  window._sseAbort = abortCtrl;
+  window._sse = { readyState: 0 };  // CONNECTING
+
+  fetch('/api/stream', { signal: abortCtrl.signal })
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+      }
+      window._sse = { readyState: 1 };  // OPEN
+      _sseRetry = 0;
+      _sseConnected = true;
+      _lastEventTime = Date.now();
+      document.getElementById('svc-status').textContent = '已连接';
+      document.getElementById('svc-status').style.background = 'rgba(0,180,42,.2)';
+
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+
+      function processChunk() {
+        reader.read().then(function(result) {
+          if (result.done) {
+            // 流正常结束，触发重连
+            console.log('SSE 流结束，准备重连');
+            _sseConnected = false;
+            scheduleReconnect();
+            return;
+          }
+          buffer += decoder.decode(result.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop();  // 保留不完整的行
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (line.indexOf('data: ') === 0) {
+              _lastEventTime = Date.now();
+              try { handleEvent(JSON.parse(line.substring(6))); } catch (e) {}
+            }
+          }
+          processChunk();
+        }).catch(function(e) {
+          if (e.name === 'AbortError') return;
+          console.error('SSE read error:', e);
+          _sseConnected = false;
+          scheduleReconnect();
+        });
+      }
+      processChunk();
+    })
+    .catch(function(e) {
+      if (e.name === 'AbortError') return;
+      console.error('SSE connect error:', e);
+      _sseConnected = false;
+      scheduleReconnect();
+    });
+
+  // 心跳检测：如果超过15秒没收到事件，强制重连（任务完成时不重连）
+  _sseHeartbeat = setInterval(function() {
+    if (_sseConnected && !_taskCompleted && Date.now() - _lastEventTime > 15000) {
+      console.log('SSE 心跳超时，强制重连');
+      _sseConnected = false;
+      connectSSE();
+      recoverState();
+    }
+  }, 10000);  // 改为10秒检查一次
+}
+
+// 指数退避重连调度
+function scheduleReconnect() {
+  if (_taskCompleted) return;  // 任务已完成，不再重连（防止 done 状态重连风暴拖死服务）
+  if (_sseRetryTimer) return;  // 已经有重连计划
+  if (_sseRetry >= SSE_MAX_RETRY) {
+    console.error('SSE 重连次数超限，停止重试');
+    document.getElementById('svc-status').textContent = '连接失败';
+    document.getElementById('svc-status').style.background = 'rgba(245,63,63,.2)';
+    // 重置重试计数，允许用户手动触发
+    _sseRetry = 0;
+    return;
+  }
+  // 指数退避：1s, 2s, 4s, 8s, ... 最大30s
+  var delay = Math.min(SSE_BASE_DELAY * Math.pow(2, _sseRetry), 30000);
+  // 添加随机抖动（±20%）
+  delay = delay * (0.8 + Math.random() * 0.4);
+  _sseRetry++;
+  console.log('SSE 将在 ' + Math.round(delay) + 'ms 后重连 (第' + _sseRetry + '次)');
+  document.getElementById('svc-status').textContent = '重连中...';
+  document.getElementById('svc-status').style.background = 'rgba(255,125,0,.2)';
+  _sseRetryTimer = setTimeout(function() {
+    _sseRetryTimer = null;
+    connectSSE();
+    // 重连后恢复状态
+    recoverState();
+  }, delay);
+}
+
+// 断线重连后恢复状态（从 /api/live 获取完整累积数据）
+async function recoverState() {
+  if (_newTaskPending) return;  // 新任务已提交、工作台已清空，不恢复旧内容
+  try {
+    // 带超时的 fetch（防止服务器慢响应卡住页面）
+    const fetchWithTimeout = (url, ms) => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms);
+      return fetch(url, {signal: ctrl.signal}).finally(() => clearTimeout(timer));
+    };
+    const [statusRes, liveRes] = await Promise.all([
+      fetchWithTimeout('/api/status', 5000),
+      fetchWithTimeout('/api/live', 5000)
+    ]);
+    const status = await statusRes.json();
+    const liveData = await liveRes.json();
+
+    if (status.state === 'running' && liveData.video_id) {
+      // ===== 有任务在跑：从 live_data 恢复完整工作台 =====
+      live = {
+        video_id: liveData.video_id,
+        title: liveData.title || '视频分析中...',
+        url: liveData.url || '',
+        duration: liveData.duration || 0,
+        original_segments: liveData.segments || [],
+        rewritten_segments: liveData.rewritten_segments || [],
+        analysis: liveData.analysis || {},
+        versions: liveData.versions || {},
+        prompt: liveData.prompt || '',
+        stats: liveData.stats || {},
+        vision: liveData.vision || [],
+      };
+      _recoveredFromLive = true;  // 标记：已从 live 恢复，SSE 不要重置
+
+      // 清除打字机缓冲（防止 SSE 重放时 token 叠加导致文本重复）
+      _typeBuffers = {};
+      _typeChunkCount = {};
+
+      // 重建骨架
+      renderSkeleton();
+      document.getElementById('live-title').textContent = live.title;
+      document.getElementById('live-meta').textContent = '处理中 · ' + live.video_id;
+      updateBanner('running', '正在分析: ' + (live.title || liveData.video_id).slice(0, 24), '');
+
+      // 恢复转写段落
+      if (live.original_segments.length > 0) {
+        live.original_segments.forEach(seg => appendSegment('original', seg));
+        setSecStatus('original', 'done', '✓ 已转写 ' + live.original_segments.length + ' 段');
+      }
+
+      // 恢复润色改写
+      if (live.rewritten_segments.length > 0) {
+        const rwHtml = '<table><tr><th>时间</th><th>原文</th><th>润色</th></tr>' +
+          live.rewritten_segments.map(s =>
+            `<tr><td>${fmtTs(s.start)}</td><td>${esc(s.original || s.text || '')}</td><td>${esc(s.rewritten || '')}</td></tr>`
+          ).join('') + '</table>';
+        setSecContent('rewrite', rwHtml);
+      }
+
+      // 恢复分析结果（结构化渲染）
+      const an = live.analysis;
+      // analysis 可能是对象、或 JSON 字符串（流式 token 累积的原始文本）
+      let analysisObj = an;
+      if (an && typeof an === 'string') {
+        try { analysisObj = JSON.parse(an); } catch(e) { analysisObj = null; }
+      } else if (an && an.text && typeof an.text === 'string') {
+        try { analysisObj = JSON.parse(an.text); } catch(e) { analysisObj = null; }
+      }
+      if (analysisObj && analysisObj.summary) {
+        const ov = `<div class="overview-grid">
+          <div class="ov-card"><div class="ov-label">💡 一句话总结</div><div class="ov-val">${esc(analysisObj.summary)}</div></div>
+          <div class="ov-card"><div class="ov-label">🎯 适合参考的场景</div><div class="ov-val">${esc(analysisObj.scenes || '')}</div></div>
+          <div class="ov-card"><div class="ov-label">🏗 核心结构</div><div class="ov-val">${esc(analysisObj.structure || '')}</div></div>
+        </div>`;
+        setSecContent('overview', ov);
+        if (analysisObj.highlights && analysisObj.highlights.length) {
+          const lh = '<table><tr><th>值得学的点</th><th>原片怎么做的</th><th>仿写时怎么用</th></tr>' +
+            analysisObj.highlights.map(h => `<tr><td>${esc(h.point)}</td><td>${esc(h.how)}</td><td>${esc(h.use)}</td></tr>`).join('') + '</table>';
+          setSecContent('learn', lh);
+        }
+      } else if (an && (an.text || typeof an === 'string')) {
+        // 流式文本（还在生成中）— 尝试解析 JSON
+        const raw = an.text || an;
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.summary) {
+            const ov = `<div class="overview-grid">
+              <div class="ov-card"><div class="ov-label">💡 一句话总结</div><div class="ov-val">${esc(parsed.summary)}</div></div>
+              <div class="ov-card"><div class="ov-label">🎯 适合参考的场景</div><div class="ov-val">${esc(parsed.scenes || '')}</div></div>
+              <div class="ov-card"><div class="ov-label">🏗 核心结构</div><div class="ov-val">${esc(parsed.structure || '')}</div></div>
+            </div>`;
+            setSecContent('overview', ov);
+            if (parsed.highlights) {
+              const lh = '<table><tr><th>值得学的点</th><th>原片怎么做的</th><th>仿写时怎么用</th></tr>' +
+                parsed.highlights.map(h => `<tr><td>${esc(h.point)}</td><td>${esc(h.how)}</td><td>${esc(h.use)}</td></tr>`).join('') + '</table>';
+              setSecContent('learn', lh);
+            }
+          } else {
+            setSecContent('overview', `<pre>${esc(raw)}</pre>`);
+          }
+        } catch(e) {
+          setSecContent('overview', `<pre>${esc(raw)}</pre>`);
+        }
+      }
+
+      // 恢复多版本
+      if (live.versions && (live.versions.text || Object.keys(live.versions).length > 0)) {
+        if (live.versions.text) {
+          setSecContent('versions', `<pre>${esc(live.versions.text)}</pre>`);
+        } else {
+          let verHtml = '';
+          let vi = 0;
+          for (const [name, text] of Object.entries(live.versions)) {
+            verHtml += `<div class="ver-block v${vi % 4}"><h5>📝 ${esc(name)}</h5>`;
+            if (Array.isArray(text)) verHtml += `<ul class="hook-list">${text.map(h => `<li>${esc(h)}</li>`).join('')}</ul>`;
+            else verHtml += `<div class="ver-text">${esc(text)}</div>`;
+            verHtml += '</div>';
+            vi++;
+          }
+          if (verHtml) setSecContent('versions', verHtml);
+        }
+      }
+
+      // 恢复互动数据
+      if (live.stats && Object.keys(live.stats).length > 0) {
+        renderStatsPills(live.stats);
+      }
+
+      // 恢复画面分析
+      if (live.vision && live.vision.length > 0) {
+        const vHtml = live.vision.map(f => {
+          const img = f.image ? `<img src="${esc(f.image)}" class="v-img" onerror="this.style.display='none'">` : '';
+          return `<div class="vision-item">${img}<div class="v-time">⏱ ${f.time}s</div><div class="v-text">${esc(f.analysis || '')}</div></div>`;
+        }).join('');
+        setSecContent('vision', `<div class="vision-block">${vHtml}</div>`);
+      }
+
+      // 恢复子任务进度
+      const step = liveData.step || '';
+      resetSubTasks();
+      if (step === 'downloading') {
+        startSubTask('download');
+      } else if (step === 'transcribing' || step === 'rewriting') {
+        startSubTask('download'); doneSubTask('download');
+        startSubTask('transcribe'); doneSubTask('transcribe');
+        startSubTask('rewrite');
+        startSubTask('analysis');
+        startSubTask('stats');
+        startSubTask('vision');
+        startSubTask('versions');
+      } else if (step === 'finalizing' || step === 'done') {
+        ['download','transcribe','rewrite','analysis','stats','vision','versions'].forEach(k => {
+          startSubTask(k); doneSubTask(k);
+        });
+      }
+      renderSubTasks();
+
+      // 估算进度
+      const pct = step === 'downloading' ? 10 : step === 'transcribing' ? 30 :
+                  step === 'rewriting' ? 60 : step === 'finalizing' ? 90 : 100;
+      updateHP(pct);
+
+    } else if (status.state === 'idle') {
+      // ===== 没有任务在跑 =====
+      _recoveredFromLive = false;
+      // 检查是否有刚完成的任务（live_data.step === 'done'）
+      if (liveData.step === 'done' && liveData.video_id) {
+        // 刚完成的任务：加载完整报告渲染，恢复所有板块内容
+        try {
+          const rr = await fetch('/api/report/' + liveData.video_id);
+          if (rr.ok) {
+            const rpt = await rr.json();
+            renderReport(rpt);
+            updateBanner('idle', '✅ 上次分析完成 · ' + (rpt.title || '').slice(0, 20), '可导出或查看分析记录');
+          } else {
+            // 报告文件缺失，退化为仅显示标题骨架
+            live = {
+              video_id: liveData.video_id,
+              title: liveData.title || '',
+              url: liveData.url || '',
+              duration: liveData.duration || 0,
+              original_segments: liveData.segments || [],
+            };
+            renderSkeleton();
+            document.getElementById('live-title').textContent = liveData.title || '分析完成';
+            document.getElementById('live-meta').textContent = '✅ 分析完成 · ' + liveData.video_id;
+            updateBanner('idle', '✅ 分析完成 · ' + (liveData.title || '').slice(0, 20), '可导出或查看分析记录');
+          }
+        } catch (e) {
+          console.error('加载已完成报告失败:', e);
+        }
+      } else {
+        // 没有最近任务，尝试加载最近的历史报告
+        try {
+          const hr = await fetch('/api/history');
+          const history = await hr.json();
+          if (history.length > 0) {
+            updateBanner('idle', '✅ 上次分析 · ' + (history[0].title || '').slice(0, 20), '可导出或查看分析记录');
+            // 尝试加载最近报告到工作台
+            try {
+              const rr = await fetch('/api/report/' + history[0].video_id);
+              if (rr.ok) {
+                const rpt = await rr.json();
+                renderReport(rpt);
+              }
+            } catch (e) {}
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {
+    console.error('状态恢复失败:', e);
+  }
+}
+
+// 渲染完整报告到工作台
+function renderReport(rpt) {
+  renderSkeleton();
+  document.getElementById('live-title').textContent = rpt.title || '视频分析报告';
+  document.getElementById('live-meta').textContent = '⏱ ' + (rpt.duration || 0) + 's · ' + (rpt.video_id || '');
+  live = { video_id: rpt.video_id, title: rpt.title, url: rpt.url, duration: rpt.duration };
+
+  // 转写
+  if (rpt.original_segments && rpt.original_segments.length) {
+    rpt.original_segments.forEach(seg => appendSegment('original', seg));
+    setSecStatus('original', 'done', '✓ ' + rpt.original_segments.length + ' 段');
+  }
+  // 润色
+  if (rpt.rewritten_segments && rpt.rewritten_segments.length) {
+    const rwHtml = '<table><tr><th>时间</th><th>原文</th><th>润色</th></tr>' +
+      rpt.rewritten_segments.map(s =>
+        `<tr><td>${fmtTs(s.start)}</td><td>${esc(s.original || s.text || '')}</td><td>${esc(s.rewritten || '')}</td></tr>`
+      ).join('') + '</table>';
+    setSecContent('rewrite', rwHtml);
+  }
+  // 分析
+  const an = rpt.analysis || {};
+  if (an.summary) {
+    const ov = `<div class="overview-grid">
+      <div class="ov-card"><div class="ov-label">💡 一句话总结</div><div class="ov-val">${esc(an.summary)}</div></div>
+      <div class="ov-card"><div class="ov-label">🎯 适合参考的场景</div><div class="ov-val">${esc(an.scenes || '')}</div></div>
+      <div class="ov-card"><div class="ov-label">🏗 核心结构</div><div class="ov-val">${esc(an.structure || '')}</div></div>
+    </div>`;
+    setSecContent('overview', ov);
+    if (an.highlights && an.highlights.length) {
+      const lh = '<table><tr><th>值得学的点</th><th>原片怎么做的</th><th>仿写时怎么用</th></tr>' +
+        an.highlights.map(h => `<tr><td>${esc(h.point)}</td><td>${esc(h.how)}</td><td>${esc(h.use)}</td></tr>`).join('') + '</table>';
+      setSecContent('learn', lh);
+    }
+  }
+  // 多版本
+  if (rpt.versions) {
+    let verHtml = '', vi = 0;
+    for (const [name, text] of Object.entries(rpt.versions)) {
+      verHtml += `<div class="ver-block v${vi % 4}"><h5>📝 ${esc(name)}</h5>`;
+      if (Array.isArray(text)) verHtml += `<ul class="hook-list">${text.map(h => `<li>${esc(h)}</li>`).join('')}</ul>`;
+      else verHtml += `<div class="ver-text">${esc(text)}</div>`;
+      verHtml += '</div>'; vi++;
+    }
+    if (verHtml) setSecContent('versions', verHtml);
+  }
+  // 互动数据
+  if (rpt.stats) renderStatsPills(rpt.stats);
+  // 画面分析
+  if (rpt.vision && rpt.vision.length) {
+    const vHtml = rpt.vision.map(f => {
+      const img = f.image ? `<img src="${esc(f.image)}" class="v-img" onerror="this.style.display='none'">` : '';
+      return `<div class="vision-item">${img}<div class="v-time">⏱ ${f.time}s</div><div class="v-text">${esc(f.analysis || '')}</div></div>`;
+    }).join('');
+    setSecContent('vision', `<div class="vision-block">${vHtml}</div>`);
+  }
+  // 导出按钮
+  renderExports(rpt.video_id);
+  updateHP(100);
+}
+
+function handleEvent(d) {
+  // 任务错误
+  if (d.type === 'job_error') {
+    _taskCompleted = true;  // 任务失败，停止 SSE 重连
+    alert('❌ ' + (d.message || '任务失败'));
+    updateBanner('idle', '任务失败: ' + (d.message || '').slice(0, 40), '');
+    document.getElementById('live-title').textContent = '❌ 任务失败';
+    return;
+  }
+  // 状态推送（页面刷新后恢复：任务已完成/失败时结束重连）
+  if (d.type === 'job_state') {
+    _taskCompleted = true;
+    if (d.state === 'done') {
+      updateBanner('idle', '✅ 任务已完成，可查看分析记录', '');
+      document.getElementById('svc-status').textContent = '已连接';
+      document.getElementById('svc-status').style.background = 'rgba(0,180,42,.2)';
+    } else if (d.state === 'error') {
+      updateBanner('idle', '❌ 上次任务失败', '');
+    }
+    return;
+  }
+  if (d.type === 'connected') return;
+  if (!d.video_id) return;
+  liveSeq++;
+  const vid = d.video_id;
+  if (!live || live.video_id !== vid) {
+    // 如果刚从 live 恢复了同一个视频，跳过重置（SSE 重放覆盖恢复的数据）
+    if (_recoveredFromLive && live && live.video_id === vid) {
+      // 不重置，继续累积数据
+    } else {
+      _recoveredFromLive = false;
+      // 新视频开始：重置工作台
+      live = {video_id: vid, title: d.title || '视频分析中...', url: '', duration: 0};
+      resetWorkbench();
+      document.getElementById('live-title').textContent = d.title || '视频分析中...';
+      document.getElementById('live-meta').textContent = '处理中 · ' + vid;
+      updateBanner('running', '正在分析: ' + (d.title || vid).slice(0, 24), '');
+    }
+  }
+  switch (d.type) {
+    case 'video_skipped':
+      updateBanner('running', `⏭ ${(d.title || '该视频').slice(0, 20)} 无语音，已跳过分析`, '');
+      break;
+    case 'batch_progress': {
+      _newTaskPending = false;  // 批量任务正式开始
+      _batchInfo = { index: d.index, total: d.total };
+      const _ph = d.phase === 'download' ? '下载音频' : (d.failed ? '跳过(下载失败)' : '正在分析');
+      updateBanner('running', `${_ph}：${(d.title || '').slice(0, 20)}`, '');
+      break;
+    }
+    case 'video_start':
+      _newTaskPending = false;  // 新任务正式开始
+      if (_recoveredFromLive && live && live.video_id === vid) {
+        // 已恢复过，只更新 URL
+        live.url = d.url || live.url;
+      } else {
+        _recoveredFromLive = false;
+        live = {video_id: vid, title: d.title || '视频分析中...', url: d.url || ''};
+        resetWorkbench();
+        document.getElementById('live-title').textContent = d.title || '视频分析中...';
+        document.getElementById('live-meta').textContent = '🔽 下载完成 · 开始转写';
+        updateBanner('running', '正在转写: ' + (d.title || vid).slice(0, 22), '');
+      }
+      startSubTask('download');
+      doneSubTask('download');
+      startSubTask('transcribe');
+      renderSubTasks();
+      updateHP(10);
+      break;
+    case 'transcribe_segment':
+      // 去重：SSE 重放可能包含已恢复的段落
+      if (live.original_segments && live.original_segments.length > 0) {
+        const lastSeg = live.original_segments[live.original_segments.length - 1];
+        if (lastSeg && d.segment && Math.abs(lastSeg.start - d.segment.start) < 0.01 &&
+            lastSeg.text === d.segment.text) break;
+      }
+      live.original_segments = (live.original_segments || []).concat([d.segment]);
+      appendSegment('original', d.segment);
+      // 转写进度：15%→40%（根据段数估算）
+      const segCount = (live.original_segments || []).length;
+      updateHP(Math.min(40, 15 + segCount * 2));
+      break;
+    case 'transcribe_done':
+      live.title = d.title; live.duration = d.duration;
+      live.original_segments = d.segments;
+      document.getElementById('live-title').textContent = d.title;
+      document.getElementById('live-meta').textContent = `⏱ ${Math.round(d.duration)}秒 · 转写完成`;
+      setSecContent('original', (d.segments || []).map(s =>
+        `<div class="seg-line"><span class="ts">[${fmtTs(s.start)}]</span>${esc(s.text)}</div>`).join(''));
+      doneSubTask('transcribe');
+      startSubTask('rewrite');
+      startSubTask('analysis');
+      startSubTask('versions');
+      renderSubTasks();
+      setSecStatus('rewrite', 'loading', '改写中...');
+      showSkeletonLines('rewrite', 3);
+      setSecStatus('overview', 'loading', '分析中...');
+      showSkeletonLines('overview', 3);
+      setSecStatus('versions', 'loading', '生成中...');
+      showSkeletonLines('versions', 3);
+      updateHP(45);
+      break;
+    case 'rewrite_batch':
+      // SSE 重放时跳过已恢复的数据
+      if (_recoveredFromLive && live.rewritten_segments && live.rewritten_segments.length > 0 &&
+          d.segments && d.segments.length > 0) {
+        const firstNew = d.segments[0];
+        const lastExisting = live.rewritten_segments[live.rewritten_segments.length - 1];
+        if (lastExisting && firstNew && Math.abs(lastExisting.start - firstNew.start) < 0.01) break;
+      }
+      live.rewritten_segments = (live.rewritten_segments || []).concat(d.segments || []);
+      const rwHtml = (live.rewritten_segments || []).map(s =>
+        `<div class="seg-line"><span class="ts green">[${fmtTs(s.start)}]</span>${esc(s.rewritten)}</div>`).join('');
+      setSecContent('rewrite', rwHtml);
+      doneSubTask('rewrite');
+      renderSubTasks();
+      updateHP(55);
+      break;
+    case 'vision_frame':
+      live.vision = (live.vision || []).concat([d.frame]);
+      if (_subTasks.vision.status === 'pending') {
+        startSubTask('vision');
+        renderSubTasks();
+      }
+      const vHtml = (live.vision || []).map(f => {
+        const img = f.image ? `<img src="${esc(f.image)}" class="v-img" onerror="this.style.display='none'">` : '';
+        return `<div class="vision-item">${img}<div class="v-time">⏱ ${f.time}s</div><div class="v-text">${esc(f.analysis || '')}</div></div>`;
+      }).join('');
+      setSecContent('vision', `<div class="vision-block">${vHtml}</div>`);
+      updateHP(75);
+      break;
+    case 'analysis_token':
+      if (_recoveredFromLive && live.analysis && Object.keys(live.analysis).length > 0) break;
+      typewriterAppend('overview', d.tok);
+      break;
+    case 'versions_token':
+      if (_recoveredFromLive && live.versions && (live.versions.text || Object.keys(live.versions).length > 0)) break;
+      typewriterAppend('versions', d.tok);
+      break;
+    case 'analysis_done':
+      live.analysis = d.analysis;
+      live.analysis_raw = null;
+      _typeBuffers['overview'] = null;
+      const an = d.analysis || {};
+      // analysis 可能是对象或 JSON 字符串
+      let anObj = an;
+      if (typeof an === 'string') { try { anObj = JSON.parse(an); } catch(e) { anObj = {}; } }
+      else if (an.text && typeof an.text === 'string') { try { anObj = JSON.parse(an.text); } catch(e) {} }
+      if (anObj.summary) {
+        const ov = `<div class="overview-grid">
+          <div class="ov-card"><div class="ov-label">💡 一句话总结</div><div class="ov-val">${esc(anObj.summary)}</div></div>
+          <div class="ov-card"><div class="ov-label">🎯 适合参考的场景</div><div class="ov-val">${esc(anObj.scenes || '')}</div></div>
+          <div class="ov-card"><div class="ov-label">🏗 核心结构</div><div class="ov-val">${esc(anObj.structure || '')}</div></div>
+        </div>`;
+        setSecContent('overview', ov);
+      }
+      if (anObj.highlights && anObj.highlights.length) {
+        const lh = `<table><tr><th>值得学的点</th><th>原片怎么做的</th><th>仿写时怎么用</th></tr>` +
+          anObj.highlights.map(h => `<tr><td>${esc(h.point)}</td><td>${esc(h.how)}</td><td>${esc(h.use)}</td></tr>`).join('') + `</table>`;
+        setSecContent('learn', lh);
+      }
+      doneSubTask('analysis');
+      renderSubTasks();
+      updateHP(70);
+      break;
+    case 'versions_done':
+      live.versions = d.versions;
+      live.versions_raw = null;
+      _typeBuffers['versions'] = null;
+      let verHtml = '';
+      let vi = 0;
+      for (const [name, text] of Object.entries(d.versions || {})) {
+        verHtml += `<div class="ver-block v${vi % 4}"><h5>📝 ${esc(name)}</h5>`;
+        if (Array.isArray(text)) verHtml += `<ul class="hook-list">${text.map(h => `<li>${esc(h)}</li>`).join('')}</ul>`;
+        else verHtml += `<div class="ver-text">${esc(text)}</div>`;
+        verHtml += `</div>`;
+        vi++;
+      }
+      if (verHtml) setSecContent('versions', verHtml);
+      doneSubTask('versions');
+      renderSubTasks();
+      updateHP(80);
+      break;
+    case 'stats_done':
+      if (_recoveredFromLive && live.stats && Object.keys(live.stats).length > 0) break;
+      live.stats = d.stats;
+      renderStatsPills(d.stats);
+      startSubTask('stats');
+      doneSubTask('stats');
+      renderSubTasks();
+      break;
+    case 'video_done':
+      live.stats = Object.assign({}, live.stats, d.stats || {});
+      renderStatsPills(d.stats || {});
+      renderExports(d.video_id);
+      // 标记任务完成，停止心跳重连
+      _taskCompleted = true;
+      // 确保所有子任务标记完成
+      for (const k in _subTasks) {
+        if (_subTasks[k].status !== 'done') doneSubTask(k);
+      }
+      renderSubTasks();
+      setSecStatus('overview', 'done', '✓ 完成');
+      setSecStatus('learn', 'done', '✓ 完成');
+      setSecStatus('original', 'done', '✓ 完成');
+      setSecStatus('rewrite', 'done', '✓ 完成');
+      setSecStatus('vision', 'done', '✓ 完成');
+      setSecStatus('versions', 'done', '✓ 完成');
+      updateHP(100);
+      updateBanner('idle', '✅ 分析完成 · ' + (d.title || '').slice(0, 20), '可导出或查看分析记录');
+      break;
+  }
+}
+function resetWorkbench() {
+  _typeBuffers = {};
+  _typeChunkCount = {};
+  Object.keys(_secTimers).forEach(k => delete _secTimers[k]);
+  resetSubTasks();
+  renderSkeleton();
+  setSecStatus('original', 'loading', '转写中...');
+  showSkeletonLines('original', 5);
+}
+function renderStatsPills(st) {
+  if (!st) return;
+  const items = [];
+  if (st.like && st.like !== '-') items.push(`<span class="stat-pill" style="color:#f53f3f">❤️ ${esc(st.like)}</span>`);
+  if (st.comment && st.comment !== '-') items.push(`<span class="stat-pill" style="color:#165dff">💬 ${esc(st.comment)}</span>`);
+  if (st.collect && st.collect !== '-') items.push(`<span class="stat-pill" style="color:#ff7d00">⭐ ${esc(st.collect)}</span>`);
+  if (st.share && st.share !== '-') items.push(`<span class="stat-pill" style="color:#00b42a">🔁 ${esc(st.share)}</span>`);
+  const author = [];
+  if (st.nickname) author.push(`主播 ${esc(st.nickname)}`);
+  if (st.fans && st.fans !== '-') author.push(`粉丝 ${esc(st.fans)}`);
+  if (st.total_likes && st.total_likes !== '-') author.push(`获赞 ${esc(st.total_likes)}`);
+  if (st.works && st.works !== '-') author.push(`作品 ${esc(st.works)}`);
+  document.getElementById('live-stats').innerHTML = items.join('') +
+    (author.length ? `<div class="author-row">🎥 ${author.join(' · ')}</div>` : '');
+}
+function renderExports(vid) {
+  const el = document.getElementById('live-exports');
+  el.classList.remove('hidden');
+  el.innerHTML = `<button class="btn sm" onclick="exportReport('${vid}','xlsx')">📊 导出 Excel</button>
+    <button class="btn ghost sm" onclick="exportReport('${vid}','md')">📄 导出 MD</button>
+    <button class="btn sm" style="background:#3370ff" onclick="exportToFeishu('${vid}')">🚀 导出到飞书</button>
+    <button class="btn ghost sm" onclick="loadHistory();switchView('history')">🗂 查看记录</button>`;
+}
+function updateHP(p) {
+  scheduleRender(() => {
+    const bar = document.getElementById('live-hp-bar');
+    const wrap = document.getElementById('live-hp');
+    if (bar && wrap) { wrap.classList.remove('hidden'); bar.style.width = p + '%'; }
+    document.getElementById('gp-bar').style.width = p + '%';
+    document.getElementById('banner-progress').textContent = p ? `进度 ${p}%` : '';
+  });
+}
+function updateBanner(state, msg, prog) {
+  // 批量分析时，所有状态消息统一带「第 i/N 个」前缀（避免被其他事件覆盖）
+  if (state === 'running' && _batchInfo && msg) {
+    msg = `第 ${_batchInfo.index}/${_batchInfo.total} 个 | ${msg}`;
+  }
+  const b = document.getElementById('status-banner');
+  b.className = 'status-banner ' + state;
+  document.getElementById('banner-dot').className = 'pulse-dot ' + state;
+  document.getElementById('banner-msg').textContent = msg;
+  if (prog !== undefined) document.getElementById('banner-progress').textContent = prog;
+  // 任务运行中显示「停止拆解」按钮
+  const stopBtn = document.getElementById('btn-stop');
+  if (stopBtn) stopBtn.style.display = (state === 'running') ? '' : 'none';
+}
+
+// 停止当前拆解：终止所有 API 调用与任务流程，清空工作台
+async function stopAnalysis() {
+  if (!confirm('确定停止当前拆解吗？\n将终止所有 API 调用和任务流程。')) return;
+  try {
+    const r = await fetch('/api/stop', { method: 'POST' });
+    const j = await r.json();
+    _taskCompleted = true;   // 停止 SSE 重连
+    _batchInfo = null;
+    _newTaskPending = false;
+    if (window._sseAbort) { try { window._sseAbort.abort(); } catch (e) {} }
+    renderSkeleton();        // 清空工作台
+    updateBanner('idle', '⏹ ' + (j.message || '任务已停止'), '');
+  } catch (e) {
+    alert('停止失败: ' + e.message);
+  }
+}
+
+// ===== 任务启动 =====
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('tab-author').classList.toggle('hidden', tab !== 'author');
+  document.getElementById('tab-single').classList.toggle('hidden', tab !== 'single');
+  document.getElementById('tab-local').classList.toggle('hidden', tab !== 'local');
+}
+function uploadFile(input) { if (input.files[0]) doUpload(input.files[0]); input.value = ''; }
+async function doUpload(file) {
+  const fd = new FormData(); fd.append('file', file);
+  const r = await fetch('/api/upload', { method: 'POST', body: fd });
+  if (!r.ok) { alert('上传失败或已有任务'); return; }
+  updateBanner('running', '本地音频处理中...', '');
+  _sseRetry = 0;
+  connectSSE();
+}
+// 读取当前勾选的生成模块
+function getModules() {
+  return {
+    analysis: document.getElementById('mod-analysis').checked,
+    rewrite: document.getElementById('mod-rewrite').checked,
+    versions: document.getElementById('mod-versions').checked,
+    vision: document.getElementById('mod-vision').checked,
+  };
+}
+
+async function startSingle() {
+  const url = document.getElementById('single-url').value.trim();
+  if (!url) { alert('请输入视频链接'); return; }
+  showParsingState(url);
+  const modules = getModules();
+  const r = await fetch('/api/single', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url, modules}) });
+  const j = await r.json().catch(() => ({}));
+  if (j.error) {
+    alert('任务启动失败: ' + j.error);
+    updateBanner('idle', '任务启动失败', '');
+    return;
+  }
+  updateBanner('running', '任务已提交，解析链接中...', '');
+  setTimeout(() => {
+    if (document.getElementById('live-title').textContent.includes('解析中')) {
+      document.getElementById('live-title').textContent = '🔍 视频链接解析中...';
+      setSecEmpty('original', '正在下载并识别视频内容...');
+    }
+  }, 5000);
+}
+async function startAuthor() {
+  const url = document.getElementById('author-url').value.trim();
+  const count = parseInt(document.getElementById('author-count').value) || 5;
+  if (!url) { alert('请输入博主主页链接'); return; }
+  showParsingState(url, true);
+  const modules = getModules();
+  const r = await fetch('/api/author', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url, count, modules}) });
+  const j = await r.json().catch(() => ({}));
+  if (j.error) { alert('任务启动失败: ' + j.error); updateBanner('idle', '任务启动失败', ''); return; }
+  updateBanner('running', '正在抓取主页视频清单...', '');
+}
+function showParsingState(url, isAuthor) {
+  // 重置任务完成标志，允许心跳检测
+  _taskCompleted = false;
+  _batchInfo = null;  // 新任务重置批量进度
+  _newTaskPending = true;  // 新任务提交中，禁止恢复旧内容
+  _recoveredFromLive = false;
+  live = {video_id: 'pending', title: isAuthor ? '正在抓取博主主页...' : '正在解析视频链接...', url};
+  renderSkeleton();
+  document.getElementById('live-title').textContent = live.title;
+  document.getElementById('live-meta').textContent = '🔍 ' + url.slice(0, 60);
+  document.getElementById('live-hp').classList.remove('hidden');
+  document.getElementById('live-hp-bar').style.width = '5%';
+  startSubTask('download');
+  renderSubTasks();
+  setSecStatus('original', 'loading', '等待转写...');
+  showSkeletonLines('original', 3);
+  updateBanner('running', isAuthor ? '正在抓取主页视频清单...' : '正在解析视频链接...', '');
+  // 确保 SSE 连接就绪：立即重连接收任务事件流（服务端空闲120秒会自动断连）
+  _sseRetry = 0;
+  connectSSE();
+}
+
+// ===== 历史记录 =====
+async function loadHistory() {
+  const box = document.getElementById('history-list');
+  box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  const r = await fetch('/api/history');
+  const list = await r.json();
+  if (!list.length) { box.innerHTML = '<div class="empty">暂无分析记录</div>'; return; }
+  const escH = escapeHtml;
+  let html = `<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+    <button class="btn sm" onclick="batchExport('xlsx')">📊 批量导出 Excel</button>
+    <button class="btn ghost sm" onclick="batchExport('md')">📄 批量导出 MD</button>
+    <button class="btn sm" style="background:#3370ff" onclick="batchExportFeishu()">🚀 批量导出飞书</button>
+    <button class="btn sm" style="background:#f53f3f" onclick="batchDelete()">🗑 批量删除</button>
+    <label style="font-size:12px;color:var(--text-3);margin-left:8px"><input type="checkbox" id="hist-select-all" onchange="toggleSelectAll(this)"> 全选</label>
+    <span id="hist-selected-count" style="font-size:12px;color:var(--text-3)"></span>
+  </div>`;
+  html += `<table class="hist-table"><tr>
+    <th style="width:30px"><input type="checkbox" onchange="toggleSelectAll(this)"></th>
+    <th>时间</th><th>标题</th><th>主播</th><th>时长</th><th>点赞</th><th>评论</th><th>收藏</th><th>转发</th><th>粉丝</th><th>操作</th>
+  </tr>`;
+  list.forEach(h => {
+    html += `<tr>
+      <td><input type="checkbox" class="hist-cb" data-vid="${h.video_id}" onchange="updateSelectedCount()"></td>
+      <td style="white-space:nowrap">${escH(h.time || '')}</td>
+      <td class="hist-title" title="${escH(h.title)}">${escH(h.title)}</td>
+      <td>${escH(h.author || '-')}</td>
+      <td>${h.duration || '-'}s</td>
+      <td>${escH(h.like || '-')}</td><td>${escH(h.comment || '-')}</td>
+      <td>${escH(h.collect || '-')}</td><td>${escH(h.share || '-')}</td>
+      <td>${escH(h.fans || '-')}</td>
+      <td class="hist-actions">
+        <button class="btn sm" onclick="viewLiveReport('${h.video_id}')">查看</button>
+        <button class="btn ghost sm" onclick="exportReport('${h.video_id}','xlsx')">Excel</button>
+        <button class="btn ghost sm" onclick="exportReport('${h.video_id}','md')">MD</button>
+        <button class="btn sm" style="background:#f53f3f;color:#fff" onclick="deleteHistory('${h.video_id}',this)">删除</button>
+      </td></tr>`;
+  });
+  html += '</table>';
+  box.innerHTML = html;
+}
+function toggleSelectAll(cb) {
+  document.querySelectorAll('.hist-cb').forEach(c => c.checked = cb.checked);
+  document.getElementById('hist-select-all').checked = cb.checked;
+  updateSelectedCount();
+}
+function updateSelectedCount() {
+  const n = document.querySelectorAll('.hist-cb:checked').length;
+  document.getElementById('hist-selected-count').textContent = n ? `已选 ${n} 项` : '';
+}
+function getSelectedVids() {
+  return Array.from(document.querySelectorAll('.hist-cb:checked')).map(c => c.dataset.vid);
+}
+async function batchExport(fmt) {
+  const vids = getSelectedVids();
+  if (!vids.length) { alert('请先勾选要导出的记录'); return; }
+  const r = await fetch('/api/export/batch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({video_ids: vids, fmt}) });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); alert('导出失败: ' + (e.detail || '未知错误')); return; }
+  const blob = await r.blob();
+  const ext = fmt === 'xlsx' ? '.xlsx' : '.md';
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `批量导出_${vids.length}个视频${ext}`; a.click();
+}
+async function batchDelete() {
+  const vids = getSelectedVids();
+  if (!vids.length) { alert('请先勾选要删除的记录'); return; }
+  if (!confirm(`确定删除选中的 ${vids.length} 条记录？此操作不可恢复。`)) return;
+  let ok = 0;
+  for (const vid of vids) {
+    const r = await fetch('/api/history/' + vid, { method: 'DELETE' });
+    if (r.ok) ok++;
+  }
+  alert(`已删除 ${ok} 条记录`);
+  loadHistory();
+}
+async function deleteHistory(vid, btn) {
+  if (!confirm('确定删除这条记录？此操作不可恢复。')) return;
+  const r = await fetch('/api/history/' + vid, { method: 'DELETE' });
+  if (r.ok) { btn.closest('tr').remove(); } else alert('删除失败');
+}
+async function viewLiveReport(vid) {
+  switchView('reports');
+  const r = await fetch('/api/report/' + vid);
+  const d = await r.json();
+  live = {video_id: vid, title: d.title, duration: d.duration, url: d.url};
+  renderSkeleton();
+  document.getElementById('live-title').textContent = d.title;
+  document.getElementById('live-meta').textContent = `⏱ ${Math.round(d.duration)}秒 · 历史报告`;
+  if (d.stats) renderStatsPills(d.stats);
+  renderExports(vid);
+  // 标记所有子任务完成
+  for (const k in _subTasks) doneSubTask(k);
+  renderSubTasks();
+  const an = d.analysis || {};
+  if (an.summary) {
+    setSecContent('overview', `<div class="overview-grid">
+      <div class="ov-card"><div class="ov-label">💡 一句话总结</div><div class="ov-val">${esc(an.summary)}</div></div>
+      <div class="ov-card"><div class="ov-label">🎯 场景</div><div class="ov-val">${esc(an.scenes || '')}</div></div>
+      <div class="ov-card"><div class="ov-label">🏗 结构</div><div class="ov-val">${esc(an.structure || '')}</div></div></div>`);
+  }
+  if (an.highlights && an.highlights.length) setSecContent('learn', `<table><tr><th>值得学的点</th><th>原片怎么做的</th><th>仿写时怎么用</th></tr>${an.highlights.map(h => `<tr><td>${esc(h.point)}</td><td>${esc(h.how)}</td><td>${esc(h.use)}</td></tr>`).join('')}</table>`);
+  setSecContent('original', (d.original_segments || []).map(s => `<div class="seg-line"><span class="ts">[${fmtTs(s.start)}]</span>${esc(s.text)}</div>`).join(''));
+  if (d.rewritten_segments) setSecContent('rewrite', d.rewritten_segments.map(s => `<div class="seg-line"><span class="ts green">[${fmtTs(s.start)}]</span>${esc(s.rewritten)}</div>`).join(''));
+  if (d.vision && d.vision.length) {
+    const vh = d.vision.map(f => `<div class="vision-item">${f.image ? `<img src="${esc(f.image)}" class="v-img">` : ''}<div class="v-time">⏱ ${f.time}s</div><div class="v-text">${esc(f.analysis || '')}</div></div>`).join('');
+    setSecContent('vision', `<div class="vision-block">${vh}</div>`);
+  }
+  if (d.versions) {
+    let vh = ''; let vi = 0;
+    for (const [name, text] of Object.entries(d.versions)) {
+      vh += `<div class="ver-block v${vi % 4}"><h5>📝 ${esc(name)}</h5>` + (Array.isArray(text) ? `<ul class="hook-list">${text.map(h => `<li>${esc(h)}</li>`).join('')}</ul>` : `<div class="ver-text">${esc(text)}</div>`) + `</div>`;
+      vi++;
+    }
+    setSecContent('versions', vh);
+  }
+}
+
+// ===== 通用 =====
+function toggleSec(head) { head.closest('.section').classList.toggle('open'); }
+function copySec(ev, btn) {
+  ev.stopPropagation();
+  const sec = btn.closest('.section');
+  const src = sec.querySelector('.sec-body');
+  const text = src.innerText || src.textContent;
+  navigator.clipboard.writeText(text).then(() => { btn.textContent = '✓'; setTimeout(() => btn.textContent = '复制内容', 1500); });
+}
+function exportReport(vid, fmt) { window.open('/api/export/' + vid + '/' + fmt, '_blank'); }
+
+// 飞书导出
+async function exportToFeishu(vid) {
+  try {
+    const r = await fetch('/api/export/feishu', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({video_ids: [vid]})
+    });
+    const j = await r.json();
+    if (r.ok && j.ok) {
+      alert('✅ ' + (j.message || '导出成功'));
+    } else {
+      alert('❌ 导出失败: ' + (j.message || j.detail || '未知错误'));
+    }
+  } catch (e) {
+    alert('❌ 导出失败: ' + e.message);
+  }
+}
+
+// 批量导出到飞书
+async function batchExportFeishu() {
+  const vids = getSelectedVids();
+  if (!vids.length) { alert('请先勾选要导出的记录'); return; }
+  try {
+    const r = await fetch('/api/export/feishu', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({video_ids: vids})
+    });
+    const j = await r.json();
+    if (r.ok && j.ok) {
+      alert('✅ ' + (j.message || `成功导出 ${j.exported || vids.length} 条记录`));
+    } else {
+      alert('❌ 导出失败: ' + (j.message || j.detail || '未知错误'));
+    }
+  } catch (e) {
+    alert('❌ 导出失败: ' + e.message);
+  }
+}
+
+function fmtTs(sec) { const m = Math.floor(sec / 60), s = Math.floor(sec % 60); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeHtml(s) { return esc(s); }
+
+// ===== 设置面板 =====
+// API Key 长期保存：勾选后缓存到本机，下次打开自动回显免填
+const API_KEY_STORE = 'douyin_api_keys_v1';
+function loadKeyPref() {
+  try {
+    const s = JSON.parse(localStorage.getItem(API_KEY_STORE) || '{}');
+    return { remember: s.remember === true, keys: s.keys || {} };
+  } catch (e) { return { remember: false, keys: {} }; }
+}
+function saveKeyPref(remember, keys) {
+  try { localStorage.setItem(API_KEY_STORE, JSON.stringify({ remember, keys })); } catch (e) {}
+}
+
+async function openSettings() {
+  document.getElementById('settings-modal').classList.remove('hidden');
+  try {
+    const r = await fetch('/api/config');
+    const c = await r.json();
+    const rw = c.rewrite || {}, v = c.vision || {};
+    const fill = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    fill('cfg-p-provider', rw.primary?.provider); fill('cfg-p-url', rw.primary?.base_url);
+    fill('cfg-p-model', rw.primary?.model);
+    fill('cfg-f-provider', rw.fallback?.provider); fill('cfg-f-url', rw.fallback?.base_url);
+    fill('cfg-f-model', rw.fallback?.model);
+    fill('cfg-v-provider', v.provider); fill('cfg-v-url', v.base_url);
+    fill('cfg-v-model', v.model);
+    fill('cfg-v-interval', v.frame_interval); fill('cfg-v-maxframes', v.max_frames);
+    document.getElementById('cfg-v-enabled').checked = v.enabled !== false;
+    // API Key：勾选「长期保存」则回显缓存的 key（免填），不勾选留空由用户自行输入
+    const pref = loadKeyPref();
+    document.getElementById('cfg-remember-key').checked = pref.remember;
+    if (pref.remember) {
+      const cacheMap = { 'cfg-p-keyfile': pref.keys.p, 'cfg-f-keyfile': pref.keys.f, 'cfg-v-keyfile': pref.keys.v };
+      Object.entries(cacheMap).forEach(([id, val]) => { if (val) { const el = document.getElementById(id); if (el) el.value = val; } });
+    }
+
+    // 飞书配置（单独接口，避免泄露 secret）
+    try {
+      const fr = await fetch('/api/config/feishu');
+      const fc = await fr.json();
+      fill('cfg-fs-appid', fc.app_id);
+      fill('cfg-fs-apptoken', fc.app_token);
+      fill('cfg-fs-tableid', fc.table_id);
+      document.getElementById('cfg-fs-auto').checked = fc.auto_export === true;
+      // app_secret 不回显
+    } catch (e) {}
+  } catch (e) {}
+}
+function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+async function saveSettings() {
+  const g = id => document.getElementById(id).value;
+  // API Key：留空则不传（后端保留原值），填写才更新
+  const mk = id => { const v = g(id).trim(); return v || undefined; };
+  const payload = {
+    rewrite: {
+      primary: { provider: g('cfg-p-provider'), base_url: g('cfg-p-url'), model: g('cfg-p-model'), key: mk('cfg-p-keyfile') },
+      fallback: { provider: g('cfg-f-provider'), base_url: g('cfg-f-url'), model: g('cfg-f-model'), key: mk('cfg-f-keyfile') },
+    },
+    vision: {
+      provider: g('cfg-v-provider'), base_url: g('cfg-v-url'), model: g('cfg-v-model'), key: mk('cfg-v-keyfile'),
+      frame_interval: parseInt(g('cfg-v-interval')) || 5, max_frames: parseInt(g('cfg-v-maxframes')) || 12,
+      enabled: document.getElementById('cfg-v-enabled').checked,
+    },
+    remember_key: document.getElementById('cfg-remember-key').checked,
+  };
+  // 保存主配置
+  const r = await fetch('/api/config', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+  if (!r.ok) { alert('保存失败'); return; }
+
+  // 长期保存：勾选则缓存 key 到本机（下次自动回显免填），不勾选则清空缓存（下次重填）
+  const remember = document.getElementById('cfg-remember-key').checked;
+  if (remember) {
+    const prev = loadKeyPref().keys;
+    saveKeyPref(true, {
+      p: g('cfg-p-keyfile').trim() || prev.p || '',
+      f: g('cfg-f-keyfile').trim() || prev.f || '',
+      v: g('cfg-v-keyfile').trim() || prev.v || '',
+    });
+  } else {
+    saveKeyPref(false, {});
+  }
+
+  // 保存飞书配置
+  const fsPayload = {
+    app_id: g('cfg-fs-appid'),
+    app_secret: g('cfg-fs-appsecret'),
+    app_token: g('cfg-fs-apptoken'),
+    table_id: g('cfg-fs-tableid'),
+    auto_export: document.getElementById('cfg-fs-auto').checked,
+  };
+  // 只在用户填写了 secret 时才更新
+  if (!fsPayload.app_secret) delete fsPayload.app_secret;
+  const fr = await fetch('/api/config/feishu', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(fsPayload) });
+
+  alert('✅ 配置已保存，下次任务生效');
+  closeSettings();
+}
+
+// 清除配置：只删除各引擎 API Key，模型名与服务器链接保留
+async function clearConfig() {
+  if (!confirm('确定清除所有 API Key 吗？\n模型名和服务器链接会保留，Key 输入框将清空。')) return;
+  try {
+    const r = await fetch('/api/config/clear', { method: 'POST' });
+    const j = await r.json();
+    if (j.ok) {
+      localStorage.removeItem(API_KEY_STORE);  // 同时清掉本机缓存的 key
+      ['cfg-p-keyfile', 'cfg-f-keyfile', 'cfg-v-keyfile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      alert('✅ ' + (j.message || '已清除 API Key'));
+    } else {
+      alert('❌ 清除失败: ' + (j.message || ''));
+    }
+  } catch (e) {
+    alert('❌ 清除失败: ' + e.message);
+  }
+}
+
+// 测试飞书连接
+async function testFeishu() {
+  const el = document.getElementById('feishu-test-result');
+  el.textContent = '测试中...';
+  el.style.color = 'var(--text-3)';
+  try {
+    const r = await fetch('/api/feishu/test');
+    const j = await r.json();
+    if (j.ok) {
+      el.textContent = '✅ ' + (j.message || '连接成功');
+      el.style.color = 'var(--success)';
+    } else {
+      el.textContent = '❌ ' + (j.message || '连接失败');
+      el.style.color = '#f53f3f';
+    }
+  } catch (e) {
+    el.textContent = '❌ 请求失败: ' + e.message;
+    el.style.color = '#f53f3f';
+  }
+}
+
+// ===== 页面可见性变化时重连 =====
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') {
+    // 页面重新可见时，检查连接状态
+    if (!_sseConnected) {
+      console.log('页面重新可见，SSE 未连接，尝试重连');
+      connectSSE();
+      recoverState();
+    } else {
+      // 即使已连接，也检查一下最后事件时间
+      var elapsed = Date.now() - _lastEventTime;
+      if (elapsed > 20000) {  // 超过20秒没收到事件
+        console.log('页面重新可见，SSE 超时 ' + Math.round(elapsed/1000) + '秒，强制重连');
+        _sseConnected = false;
+        connectSSE();
+        recoverState();
+      }
+    }
+  }
+});
+
+// ===== 网络状态变化时重连 =====
+window.addEventListener('online', function() {
+  console.log('网络恢复，尝试重连 SSE');
+  _sseConnected = false;
+  connectSSE();
+  recoverState();
+});
+
+// ===== 初始化 =====
+renderSkeleton();
+// SSE 必须立即连接（不受 recovery 影响），recovery 并行执行
+connectSSE();
+recoverState();
+
+// 网页心跳：每5秒通知服务端「网页还开着」
+setInterval(function() {
+  try { fetch('/api/heartbeat', {method: 'GET', cache: 'no-store'}).catch(function(){}); } catch(e) {}
+}, 5000);
+
+// 页面关闭前通知服务端：3 秒后停止服务（刷新时新页面会立即发心跳取消）
+window.addEventListener('beforeunload', function() {
+  try { navigator.sendBeacon('/api/page-closing'); } catch(e) {}
+});
+
+// 页面加载立即心跳一次：取消刷新前的待定停止，保证刷新不误停服务
+try { fetch('/api/heartbeat', {method: 'GET', cache: 'no-store'}).catch(function(){}); } catch(e) {}
+</script>
+</body>
+</html>

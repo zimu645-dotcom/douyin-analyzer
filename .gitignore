@@ -1,0 +1,32 @@
+# ===== 虚拟环境与模型（体积大，不发布） =====
+venv/
+models/
+
+# ===== 运行时数据（含密钥、token、报告、下载内容） =====
+app_output/
+output/
+chrome_profile/
+cookies.txt
+dy_stats.json
+
+# ===== 本地密钥文件 =====
+*.key
+.deepseek_key
+.mimo_key
+
+# ===== Python 缓存 =====
+__pycache__/
+*.pyc
+
+# ===== 下载的媒体文件 =====
+*.mp4
+*.m4a
+*.mp3
+
+# ===== 测试/临时脚本（可能含本地调试信息） =====
+test_*.py
+verify_*.py
+scripts/
+vision_test.png
+exporters.py.bak
+*.bak
