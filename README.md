@@ -35,6 +35,15 @@
 
 > 以下以 **Windows** 为例（macOS/Linux 把 `venv\Scripts` 换成 `venv/bin`）。
 
+### 💡 最省事方式（Windows 用户推荐）
+
+1. 先装好 Python 3.10+（看下方第 1 步）
+2. **双击 `install.bat`** → 自动创建环境、装依赖、装浏览器、下载模型（全自动）
+3. **双击 `login.bat`** → 弹出浏览器扫码登录抖音，自动保存登录状态
+4. **双击 `start.bat`** → 启动服务
+
+下面的手动步骤是它的详细分解，遇到问题可对照排查。
+
 ### 第 1 步：安装 Python（3.10 或更高）
 
 1. 打开浏览器访问 **https://www.python.org/downloads/**
@@ -101,6 +110,16 @@ python -c "from faster_whisper.utils import download_model; download_model('Syst
 
 > 下载约 460MB，完成后 `models/` 目录里会出现 `model.bin` 等文件。
 > 想更高准确率可把 `small` 换成 `medium`（约 1.5GB，转写更准但更慢）。
+
+### 第 7.5 步：登录抖音（必须！否则下载会失败）
+
+```bash
+# Windows：双击 login.bat
+# 或命令行输入：
+python app/douyin_login.py
+```
+
+会弹出 Chrome 窗口打开抖音，用 **抖音 APP 扫码登录**（或账号密码）。登录后**关闭窗口**，登录状态自动保存（`cookies.txt` + `chrome_profile/`）。之后下载视频、抓取博主主页都需要它。以后不用重复登录（cookie 有效期内）。
 
 ### 第 8 步：启动服务
 
