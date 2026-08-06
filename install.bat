@@ -7,14 +7,20 @@ echo   Douyin Video Analyzer - Auto Install
 echo   It will setup everything automatically.
 echo ============================================
 
-REM ===== 1. Check Python =====
+REM ===== 1. Check / Auto-install Python =====
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python not found!
-    echo Please install Python 3.10+ from https://www.python.org/downloads/
-    echo IMPORTANT: Check "Add Python to PATH" during install.
-    pause
-    exit /b 1
+    echo [1/5] Python not found, trying to auto-install Python 3.12...
+    winget install -e --id Python.Python.3.12 --accept-package-agreements --accept-source-agreements >nul 2>&1
+    set "PATH=%LOCALAPPDATA%\Programs\Python\Python312;%LOCALAPPDATA%\Programs\Python\Python312\Scripts;%PATH%"
+    python --version >nul 2>&1
+    if errorlevel 1 (
+        echo [ERROR] Auto-install failed. Please install Python 3.10+ manually:
+        echo   Download: https://www.python.org/downloads/
+        echo   IMPORTANT: Check "Add Python to PATH" during install.
+        pause
+        exit /b 1
+    )
 )
 echo [1/5] Python OK
 
