@@ -1,16 +1,34 @@
 @echo off
-title Douyin Analyzer - One-Click Install
+title Douyin Analyzer - Install
 cd /d %~dp0
+set "SRC=%CD%"
 
 echo ============================================
-echo   Douyin Video Analyzer - Auto Install
+echo   Douyin Video Analyzer - Install
 echo ============================================
-echo   Install location : %CD%
-echo   This project is portable. You can put this
-echo   folder on ANY drive (C/D/E...), everything
-echo   installs into this folder.
+echo   Current location : %SRC%
 echo.
-set "PLAYWRIGHT_BROWSERS_PATH=%~dp0browsers"
+echo   Choose install location:
+echo     [Enter] = install in current folder
+echo     [D:\xxx] = install to another drive/folder
+echo     (e.g.  D:\douyin-analyzer )
+echo.
+set /p TARGET=
+if "%TARGET%"=="" set "TARGET=%SRC%"
+
+REM ==== If user chose another location, copy project there ====
+if /i not "%TARGET%"=="%SRC%" (
+    echo Copying project files to %TARGET% ...
+    if not exist "%TARGET%" mkdir "%TARGET%"
+    robocopy "%SRC%" "%TARGET%" /E /XD venv models browsers app_output output chrome_profile .git __pycache__ /XF cookies.txt *.pyc *.m4a *.mp4 *.mp3 >nul 2>&1
+    cd /d "%TARGET%"
+)
+
+echo.
+echo   Install location : %CD%
+echo   Everything installs into this folder.
+echo.
+set "PLAYWRIGHT_BROWSERS_PATH=%CD%\browsers"
 
 REM ===== 1. Check / Auto-install Python =====
 python --version >nul 2>&1
