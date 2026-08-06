@@ -31,56 +31,102 @@
 
 ---
 
-## 🚀 快速开始
+## 🚀 快速开始（一步一步，纯手动）
 
-### 1️⃣ 克隆项目
+> 以下以 **Windows** 为例（macOS/Linux 把 `venv\Scripts` 换成 `venv/bin`）。
 
+### 第 1 步：安装 Python（3.10 或更高）
+
+1. 打开浏览器访问 **https://www.python.org/downloads/**
+2. 点击 **Download Python 3.12.x**
+3. 运行安装包，**务必勾选最下方的「Add Python to PATH」**，然后点 Install Now
+4. 按键盘 **Win + R** → 输入 `cmd` → 回车（打开命令提示符）
+5. 输入 `python --version` 回车，能看到 `Python 3.12.x` 说明安装成功
+
+### 第 2 步：下载本项目
+
+任选一种方式：
+
+**方式 A（命令行）**
 ```bash
 git clone https://github.com/zimu645-dotcom/douyin-analyzer.git
 cd douyin-analyzer
 ```
 
-### 2️⃣ 创建虚拟环境并安装依赖
+**方式 B（网页下载 ZIP）**
+1. 打开 https://github.com/zimu645-dotcom/douyin-analyzer
+2. 点绿色 **Code** 按钮 → **Download ZIP**
+3. 解压到任意目录，进入解压后的 `douyin-analyzer` 文件夹
 
+### 第 3 步：创建虚拟环境
+
+在命令提示符里（已 `cd` 到项目目录）：
 ```bash
 python -m venv venv
+```
 
+### 第 4 步：激活虚拟环境
+
+```bash
 # Windows
 venv\Scripts\activate
+
 # macOS / Linux
 source venv/bin/activate
+```
 
+> 激活成功后，命令提示符最前面会出现 `(venv)` 标记。
+
+### 第 5 步：安装依赖
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 3️⃣ 下载转写模型
+> 需要等待几分钟下载。若下载慢，可先执行 `pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple` 换国内镜像。
 
-转写使用 **faster-whisper 模型**（本地运行，隐私安全）。下载模型文件到 `models/` 目录：
-
-```python
-# 方式一：用 Python 自动下载（推荐，small 约 460MB）
-python -c "from faster_whisper.utils import download_model; download_model('Systran/faster-whisper-small', output_dir='models')"
-```
-
-> 也可以从 [HuggingFace](https://huggingface.co/Systran/faster-whisper-small) 手动下载 `model.bin`、`config.json`、`tokenizer.json`、`vocabulary.json` 放入 `models/` 目录。
->
-> 想更高准确率可换 `Systran/faster-whisper-medium`。
-
-### 4️⃣ 初始化 Playwright 浏览器（抓取博主主页用）
+### 第 6 步：安装浏览器（抓取博主主页用）
 
 ```bash
 python -m playwright install chromium
 ```
 
-### 5️⃣ 启动服务
+> 这一步会下载一个 Chromium 浏览器内核（约 150MB）。只分析单个视频可以跳过，但**批量分析博主主页必须有它**。
+
+### 第 7 步：下载转写模型
 
 ```bash
-# Windows：双击 start.bat
-# 或命令行：
+python -c "from faster_whisper.utils import download_model; download_model('Systran/faster-whisper-small', output_dir='models')"
+```
+
+> 下载约 460MB，完成后 `models/` 目录里会出现 `model.bin` 等文件。
+> 想更高准确率可把 `small` 换成 `medium`（约 1.5GB，转写更准但更慢）。
+
+### 第 8 步：启动服务
+
+```bash
+# Windows：直接双击 start.bat
+# 或命令行输入：
 python app/launcher.py
 ```
 
-浏览器打开 **http://127.0.0.1:8321**
+看到 `启动服务: http://127.0.0.1:8321` 即成功。
+
+### 第 9 步：打开网页使用
+
+浏览器访问 **http://127.0.0.1:8321**，按下方「使用指南」操作。
+
+---
+
+## 🧭 第一次使用必看（配置 API Key）
+
+1. 网页右上角点 **「⚙️ 模型配置」**
+2. 在「改写引擎」/「视觉模型」里填入你的 **API Key**（DeepSeek 或 MiMo，任选）
+   - 没有 key？去 [DeepSeek 开放平台](https://platform.deepseek.com) 或 [小米 MiMo](https://platform.mimo.ai) 注册获取
+3. 点 **「💾 保存配置」**
+4. 之后就能正常分析视频了
+
+> ⚠️ **没填 API Key 也能用**：转写（音频→文字）是本地免费的；只有 AI 改写分析、画面分析需要 API Key。
 
 ---
 
