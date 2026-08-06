@@ -119,8 +119,13 @@ def analyze_video(video_id, duration):
     # 1. 下载完整视频（yt-dlp -f b，不转音频）
     vid_path = os.path.join(OUTPUT_DIR, "video_tmp", f"{video_id}.mp4")
     os.makedirs(os.path.dirname(vid_path), exist_ok=True)
+    # 定位 yt-dlp：优先 venv Scripts（不依赖 PATH），否则系统 PATH
+    import shutil as _shutil
+    _yt = os.path.join(BASE, "venv", "Scripts", "yt-dlp.exe")
+    if not os.path.exists(_yt):
+        _yt = _shutil.which("yt-dlp") or "yt-dlp"
     r = subprocess.run(
-        ["yt-dlp", "--cookies", COOKIES, "--no-playlist", "-f", "b",
+        [_yt, "--cookies", COOKIES, "--no-playlist", "-f", "b",
          "-o", vid_path, "--no-warnings", "--quiet",
          f"https://www.douyin.com/video/{video_id}"],
         capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")

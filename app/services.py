@@ -50,6 +50,16 @@ def _decode_output(raw_bytes):
     return raw_bytes.decode("latin-1", errors="replace")
 
 
+def _ytdlp_path():
+    """定位 yt-dlp 可执行文件：优先 venv Scripts（自包含，不依赖 PATH），否则系统 PATH"""
+    import shutil as _shutil
+    p = os.path.join(BASE, "venv", "Scripts", "yt-dlp.exe")
+    if os.path.exists(p):
+        return p
+    found = _shutil.which("yt-dlp")
+    return found if found else "yt-dlp"
+
+
 def download_audio(video_id, title_hint=""):
     """下载单个视频音频 → app_output/audio/<id>.m4a，返回 (ok, api_title, duration)"""
     # 已下载过则跳过（批量预下载后 process_one 复用，避免重复下载）
@@ -57,7 +67,7 @@ def download_audio(video_id, title_hint=""):
     if _glob.glob(os.path.join(OUTPUT_DIR, "audio", f"{video_id}.*")):
         return True, title_hint, 0
     dest = os.path.join(OUTPUT_DIR, "audio", f"{video_id}.%(ext)s")
-    cmd = ["yt-dlp", "--cookies", COOKIES, "--no-playlist",
+    cmd = [_ytdlp_path(), "--cookies", COOKIES, "--no-playlist",
            "-f", "b", "-x", "--audio-format", "m4a", "-o", dest,
            "--print", "after_move:__TITLE__%(title)s",
            "--print", "after_move:__DURATION__%(duration_string)s",
