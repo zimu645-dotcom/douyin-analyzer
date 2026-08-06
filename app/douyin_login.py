@@ -7,8 +7,11 @@
 """
 import os, sys, time, json
 
-PROFILE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "chrome_profile")
-COOKIES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cookies.txt")
+from _paths import BASE
+PROFILE_DIR = os.path.join(BASE, "chrome_profile")
+COOKIES = os.path.join(BASE, "cookies.txt")
+# 打包/源码都指向项目内 browsers（不依赖系统环境变量，避免闪退）
+os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", os.path.join(BASE, "browsers"))
 
 from playwright.sync_api import sync_playwright
 

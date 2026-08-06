@@ -5,7 +5,7 @@
 import os, sys, json, time, threading, re, shutil, subprocess
 from pathlib import Path
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from _paths import BASE
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # CUDA 库路径（faster-whisper GPU 需要）
@@ -78,8 +78,15 @@ def spawn_worker(args):
         except OSError:
             pass
     # 启动子进程（保存引用，供「停止拆解」终止）
-    proc = subprocess.Popen([VENV_PY, WORKER] + args,
-                            cwd=os.path.dirname(WORKER),
+    if getattr(sys, "frozen", False):
+        # 打包模式：启动同目录下的 worker.exe
+        _exe_dir = os.path.dirname(sys.executable)
+        cmd = [os.path.join(_exe_dir, "worker.exe")] + args
+        _cwd = _exe_dir
+    else:
+        cmd = [VENV_PY, WORKER] + args
+        _cwd = os.path.dirname(WORKER)
+    proc = subprocess.Popen(cmd, cwd=_cwd,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                             creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0)
     _WORKER_PROC = proc
@@ -139,7 +146,11 @@ class SingleJob(BaseModel):
 # ---------------- API 路由 ----------------
 @app.get("/", response_class=HTMLResponse)
 def index():
-    html = Path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "index.html")).read_text(encoding="utf-8")
+    if getattr(sys, "frozen", False):
+        _base = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+    else:
+        _base = os.path.dirname(os.path.abspath(__file__))
+    html = Path(os.path.join(_base, "static", "index.html")).read_text(encoding="utf-8")
     return HTMLResponse(html)
 
 

@@ -4,8 +4,7 @@
 """
 import os, json
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUTPUT_DIR = os.path.join(BASE, "app_output")
+from _paths import BASE, OUTPUT_DIR
 CONFIG_FILE = os.path.join(OUTPUT_DIR, "config.json")
 
 DEFAULT_CONFIG = {

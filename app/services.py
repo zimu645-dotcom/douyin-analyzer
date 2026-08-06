@@ -4,8 +4,7 @@
 """
 import os, sys, json, time, subprocess, glob, urllib.request, socket
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUTPUT_DIR = os.path.join(BASE, "app_output")
+from _paths import BASE, OUTPUT_DIR
 COOKIES = os.path.join(BASE, "cookies.txt")
 MODEL_DIR = os.path.join(BASE, "models")
 KEY_FILE = os.path.join(BASE, ".deepseek_key")
@@ -61,9 +60,10 @@ def _ytdlp_path():
 
 
 def _ffmpeg_location():
-    """定位 ffmpeg 目录：优先项目根（ffmpeg.exe 随项目携带，最稳），否则 None（走系统 PATH）"""
-    if os.path.exists(os.path.join(BASE, "ffmpeg.exe")):
-        return BASE
+    """定位 ffmpeg 目录：项目根 或 app 目录（ffmpeg.exe 随项目携带，最稳），否则 None（走系统 PATH）"""
+    for d in (BASE, os.path.join(BASE, "app")):
+        if os.path.exists(os.path.join(d, "ffmpeg.exe")):
+            return d
     return None
 
 
@@ -111,8 +111,20 @@ def get_transcriber():
     if _transcriber is None:
         import ctranslate2
         from faster_whisper import WhisperModel
-        device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
-        compute = "int8_float16" if device == "cuda" else "int8"
+        if getattr(sys, "frozen", False):
+            device = "cpu"
+            compute = "int8"
+        else:
+            device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
+            if device == "cuda":
+                # 有 GPU 但 CUDA 库(cublas)缺失时回退 CPU，避免转写卡死
+                try:
+                    import ctypes
+                    ctypes.cdll.LoadLibrary("cublas64_12.dll")
+                except Exception:
+                    print("[WARN] CUDA 库缺失，回退 CPU 转写", flush=True)
+                    device = "cpu"
+            compute = "int8_float16" if device == "cuda" else "int8"
         _transcriber = {"model": WhisperModel(MODEL_DIR, device=device, compute_type=compute), "device": device}
     return _transcriber
 

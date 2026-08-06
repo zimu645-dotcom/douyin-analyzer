@@ -8,7 +8,7 @@
 """
 import os, sys, json, time, re, io
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from _paths import BASE
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 强制 UTF-8 输出
@@ -434,8 +434,12 @@ def run_author(url, count, modules=None):
     import subprocess, re as _re
     write_status(state="running", message="抓取主页视频清单...")
     # 抓清单：多抓 count*3 个候选，供作者过滤（主页可能混入推荐视频）
-    r = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "fetch_author_cli.py"),
-                        url, str(count * 5)], capture_output=True, timeout=180)
+    if getattr(sys, "frozen", False):
+        _cli = os.path.join(os.path.dirname(sys.executable), "fetch_author_cli.exe")
+        r = subprocess.run([_cli, url, str(count * 5)], capture_output=True, timeout=180)
+    else:
+        _cli_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fetch_author_cli.py")
+        r = subprocess.run([sys.executable, _cli_py, url, str(count * 5)], capture_output=True, timeout=180)
     vfile = os.path.join(OUTPUT_DIR, "videos.json")
     if not os.path.exists(vfile):
         write_status(state="error", message="主页未抓取到视频")

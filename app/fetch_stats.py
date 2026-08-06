@@ -6,8 +6,10 @@
 """
 import json, os, sys, io
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from _paths import BASE
 PROFILE = os.path.join(BASE, "chrome_profile")
+# 指向项目内 browsers，不依赖系统环境变量
+os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", os.path.join(BASE, "browsers"))
 
 API_SCRIPT = r"""
 async (payload) => {

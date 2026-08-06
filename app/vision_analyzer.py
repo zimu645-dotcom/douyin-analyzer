@@ -4,8 +4,7 @@
 """
 import os, sys, json, base64, subprocess, io, time, urllib.request
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUTPUT_DIR = os.path.join(BASE, "app_output")
+from _paths import BASE, OUTPUT_DIR
 COOKIES = os.path.join(BASE, "cookies.txt")
 
 VISION_PROMPT = """你是短视频画面分析专家。这是一段抖音视频的某一帧画面。
@@ -149,9 +148,14 @@ def analyze_video(video_id, duration):
         t += frame_interval
 
     results = []
-    # 优先用项目根自带 ffmpeg，否则系统 PATH
-    _ffmpeg = os.path.join(BASE, "ffmpeg.exe")
-    if not os.path.exists(_ffmpeg):
+    # 优先用项目内自带 ffmpeg（项目根 或 app 目录），否则系统 PATH
+    _ffmpeg = ""
+    for _d in (BASE, os.path.join(BASE, "app")):
+        _p = os.path.join(_d, "ffmpeg.exe")
+        if os.path.exists(_p):
+            _ffmpeg = _p
+            break
+    if not _ffmpeg:
         _ffmpeg = "ffmpeg"
     for i, t in enumerate(times):
         img = os.path.join(frames_dir, f"frame_{i:02d}_{t:03d}s.jpg")

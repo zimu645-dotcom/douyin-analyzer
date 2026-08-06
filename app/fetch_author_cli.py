@@ -4,9 +4,11 @@
 """
 import sys, os, json, time, re
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from _paths import BASE
 PROFILE_DIR = os.path.join(BASE, "chrome_profile")
 OUT = os.path.join(BASE, "app_output", "videos.json")
+# 指向项目内 browsers，不依赖系统环境变量
+os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", os.path.join(BASE, "browsers"))
 
 
 def clean_title(raw):

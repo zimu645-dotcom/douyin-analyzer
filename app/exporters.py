@@ -6,7 +6,7 @@
 """
 import os, json, time
 
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app_output")
+from _paths import OUTPUT_DIR
 EXPORT_DIR = os.path.join(OUTPUT_DIR, "exports")
 os.makedirs(EXPORT_DIR, exist_ok=True)
 

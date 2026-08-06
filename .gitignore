@@ -33,3 +33,7 @@ exporters.py.bak
 
 # ===== Playwright 浏览器（运行时下载，体积大，不提交） =====
 browsers/
+
+# ===== ffmpeg 二进制（运行时使用，体积大，不提交） =====
+ffmpeg.exe
+ffprobe.exe
