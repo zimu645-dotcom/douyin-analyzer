@@ -67,7 +67,17 @@ python -m playwright install chromium
 REM ===== 5. Download whisper model =====
 echo [5/5] Downloading whisper model (about 460MB)...
 if not exist models\model.bin (
+    echo  Downloading via HuggingFace mirror (faster in China)...
+    set "HF_ENDPOINT=https://hf-mirror.com"
     python -c "from faster_whisper.utils import download_model; download_model('Systran/faster-whisper-small', output_dir='models')"
+    if errorlevel 1 (
+        echo.
+        echo [WARN] Auto download failed. Please download manually:
+        echo   Visit  https://huggingface.co/Systran/faster-whisper-small
+        echo   Download model.bin / config.json / tokenizer.json / vocabulary.json
+        echo   Put them into the "models" folder, then run install.bat again.
+        pause
+    )
 ) else (
     echo Model already exists, skip
 )

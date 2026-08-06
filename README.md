@@ -113,6 +113,8 @@ python -c "from faster_whisper.utils import download_model; download_model('Syst
 
 > 下载约 460MB，完成后 `models/` 目录里会出现 `model.bin` 等文件。
 > 想更高准确率可把 `small` 换成 `medium`（约 1.5GB，转写更准但更慢）。
+>
+> **国内网络慢？** 先执行 `set HF_ENDPOINT=https://hf-mirror.com`（Windows）或 `export HF_ENDPOINT=https://hf-mirror.com`（macOS/Linux），再用上面的命令即可走国内镜像加速下载。
 
 ### 第 7.5 步：登录抖音（必须！否则下载会失败）
 
