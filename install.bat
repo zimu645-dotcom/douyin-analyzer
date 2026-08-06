@@ -93,6 +93,24 @@ if not exist models\model.bin (
     echo Model already exists, skip
 )
 
+REM ===== 6. Check / Install ffmpeg (needed for audio extraction) =====
+echo [6/6] Checking ffmpeg...
+ffmpeg -version >nul 2>&1
+if errorlevel 1 (
+    echo   ffmpeg not found, installing via winget...
+    winget install Gyan.FFmpeg --accept-package-agreements --accept-source-agreements >nul 2>&1
+    ffmpeg -version >nul 2>&1
+    if errorlevel 1 (
+        echo   [WARN] ffmpeg install failed. Please install manually:
+        echo   Download: https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+        echo   Add ffmpeg.exe/ffprobe.exe to system PATH.
+    ) else (
+        echo   ffmpeg installed OK (restart start.bat to use it)
+    )
+) else (
+    echo   ffmpeg OK
+)
+
 echo.
 echo ============================================
 echo   INSTALL COMPLETE!
