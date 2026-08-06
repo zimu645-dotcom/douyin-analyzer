@@ -37,11 +37,11 @@
 
 ### 💡 最省事方式（Windows 用户推荐）
 
-1. **双击 `install.bat`** → 没装 Python 会自动帮你装，然后自动创建环境、装依赖、装浏览器、下载模型（全自动）
+1. **双击 `install.bat`** → 先输入要安装的盘符（如 `D`，大小写都行），脚本自动在该盘建立 `douyin-analyzer` 文件夹并把项目复制过去，然后自动装 Python、装依赖、装浏览器、**下载 medium 转写模型（1.5GB）**，全自动
 2. **双击 `login.bat`** → 弹出浏览器扫码登录抖音，自动保存登录状态
 3. **双击 `start.bat`** → 启动服务
 
-> **可以放任意盘**：整个项目是便携的，venv、模型、浏览器都装在项目文件夹内（`browsers/`），放 C 盘 / D 盘 / E 盘任何位置都能用，移动整个文件夹也不会坏。
+> **安装位置自由**：装到哪个盘由你选，所有东西（venv、模型、浏览器）都在该项目文件夹内，整个文件夹移动也不影响使用。
 >
 > 装 Python 需要系统权限，可能会弹出安装提示，点同意即可。若自动安装失败，再手动装 Python（见下方第 1 步）。
 
@@ -108,13 +108,14 @@ python -m playwright install chromium
 ### 第 7 步：下载转写模型
 
 ```bash
-python -c "from faster_whisper.utils import download_model; download_model('Systran/faster-whisper-small', output_dir='models')"
+python -c "from faster_whisper.utils import download_model; download_model('Systran/faster-whisper-medium', output_dir='models')"
 ```
 
-> 下载约 460MB，完成后 `models/` 目录里会出现 `model.bin` 等文件。
-> 想更高准确率可把 `small` 换成 `medium`（约 1.5GB，转写更准但更慢）。
+> 默认使用 **medium** 模型（约 1.5GB，转写准确率高）。完成后 `models/` 目录里会出现 `model.bin` 等文件。
 >
 > **国内网络慢？** 先执行 `set HF_ENDPOINT=https://hf-mirror.com`（Windows）或 `export HF_ENDPOINT=https://hf-mirror.com`（macOS/Linux），再用上面的命令即可走国内镜像加速下载。
+>
+> 想更小更快可换 `small`（460MB），想更强可换 `large-v3`（3GB，需更强显卡）。
 
 ### 第 7.5 步：登录抖音（必须！否则下载会失败）
 
@@ -219,6 +220,20 @@ python app/launcher.py
 5. 点「🔗 测试连接」验证
 
 ---
+
+## 🛠 技术栈
+
+| 模块 | 技术 |
+|------|------|
+| 后端服务 | Python 3.10+ / FastAPI / Uvicorn / Pydantic |
+| 语音转写 | faster-whisper + ctranslate2（本地，medium 模型） |
+| 视频下载 | yt-dlp（音频提取） |
+| 博主主页抓取 | Playwright（Chromium，需登录态） |
+| AI 改写分析 | DeepSeek（主）/ MiMo（兜底），OpenAI 兼容 API |
+| 画面分析 | MiMo 视觉模型（可选） |
+| Excel 导出 | openpyxl |
+| 飞书导出 | 飞书开放平台 API（多维表格） |
+| 前端 | 原生 HTML / CSS / JavaScript（单文件，无框架） |
 
 ## ❓ 常见问题
 

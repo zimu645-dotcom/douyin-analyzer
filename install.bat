@@ -8,27 +8,38 @@ echo   Douyin Video Analyzer - Install
 echo ============================================
 echo   Current location : %SRC%
 echo.
-echo   Choose install location:
-echo     [Enter] = install in current folder
-echo     [D:\xxx] = install to another drive/folder
-echo     (e.g.  D:\douyin-analyzer )
-echo.
-set /p TARGET=
-if "%TARGET%"=="" set "TARGET=%SRC%"
+echo   Step 1: Choose install drive  (C / D / E ...)
+echo   Type a drive letter, case-insensitive:
+set /p DRIVE=
+if "%DRIVE%"=="" set "DRIVE=C"
+set "DRIVE=%DRIVE:~0,1%"
 
-REM ==== If user chose another location, copy project there ====
+REM ==== Build target path ====
+if /i "%DRIVE%"=="%SRC:~0,1%" (
+    set "TARGET=%SRC%"
+) else (
+    set "TARGET=%DRIVE%:\douyin-analyzer"
+)
+echo   Install location : %TARGET%
+echo.
+echo   Step 2: Press Enter to start (or type X to cancel)
+set /p OK=
+if /i "%OK%"=="x" exit
+
+REM ==== If user chose another drive, create folder and copy project ====
 if /i not "%TARGET%"=="%SRC%" (
-    echo Copying project files to %TARGET% ...
+    echo   Creating folder %TARGET% ...
     if not exist "%TARGET%" mkdir "%TARGET%"
+    echo   Copying project files ...
     robocopy "%SRC%" "%TARGET%" /E /XD venv models browsers app_output output chrome_profile .git __pycache__ /XF cookies.txt *.pyc *.m4a *.mp4 *.mp3 >nul 2>&1
     cd /d "%TARGET%"
 )
 
+set "PLAYWRIGHT_BROWSERS_PATH=%CD%\browsers"
 echo.
-echo   Install location : %CD%
+echo   Installing to : %CD%
 echo   Everything installs into this folder.
 echo.
-set "PLAYWRIGHT_BROWSERS_PATH=%CD%\browsers"
 
 REM ===== 1. Check / Auto-install Python =====
 python --version >nul 2>&1
@@ -64,16 +75,16 @@ REM ===== 4. Install Chromium (into project folder) =====
 echo [4/5] Installing Chromium browser (into project\browsers)...
 python -m playwright install chromium
 
-REM ===== 5. Download whisper model =====
-echo [5/5] Downloading whisper model (about 460MB)...
+REM ===== 5. Download whisper model (medium, ~1.5GB) =====
+echo [5/5] Downloading whisper model (medium, about 1.5GB)...
 if not exist models\model.bin (
     echo  Downloading via HuggingFace mirror (faster in China)...
     set "HF_ENDPOINT=https://hf-mirror.com"
-    python -c "from faster_whisper.utils import download_model; download_model('Systran/faster-whisper-small', output_dir='models')"
+    python -c "from faster_whisper.utils import download_model; download_model('Systran/faster-whisper-medium', output_dir='models')"
     if errorlevel 1 (
         echo.
         echo [WARN] Auto download failed. Please download manually:
-        echo   Visit  https://huggingface.co/Systran/faster-whisper-small
+        echo   Visit  https://huggingface.co/Systran/faster-whisper-medium
         echo   Download model.bin / config.json / tokenizer.json / vocabulary.json
         echo   Put them into the "models" folder, then run install.bat again.
         pause
