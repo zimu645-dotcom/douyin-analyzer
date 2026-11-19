@@ -18,18 +18,23 @@ DEFAULT_CONFIG = {
         "fallback": {
             "provider": "mimo",
             "base_url": "https://api.xiaomimimo.com/v1/chat/completions",
-            "model": "mimo-v2.5",
+            "model": "mimo-v2.6-flash",
             "key": "",
         },
     },
     "vision": {
         "provider": "mimo",
         "base_url": "https://api.xiaomimimo.com/v1/chat/completions",
-        "model": "mimo-v2.5",
+        "model": "mimo-v2.6-flash",
         "key": "",
-        "frame_interval": 5,   # 每5秒一帧
-        "max_frames": 12,
+        "fps": 1,             # 每秒抽帧数（0.1～10）：1=每秒1帧，0.333=每3秒1帧
         "enabled": True,
+    },
+    "asr": {
+        "engine": "cloud",        # cloud = 硅基流动云端转写（免下载模型，推荐）；local = faster-whisper 本地
+        "base_url": "https://api.siliconflow.cn/v1/audio/transcriptions",
+        "model": "FunAudioLLM/SenseVoiceSmall",
+        "key": "",                # 硅基流动 API Key（cloud.siliconflow.cn 获取）
     },
     "whisper": {
         "use_title_prompt": True,   # 用视频标题做 initial_prompt（纠正专有名词同音错）
@@ -86,8 +91,9 @@ def get_config_public():
             if eng.get("key_file"):
                 eng["key_file"] = "已配置(隐藏)"
 
-    # rewrite 是子引擎字典（primary/fallback），vision 是单引擎，分别处理
+    # rewrite 是子引擎字典（primary/fallback），vision/asr 是单引擎，分别处理
     for eng in (pub.get("rewrite", {}) or {}).values():
         _hide(eng)
     _hide(pub.get("vision", {}))
+    _hide(pub.get("asr", {}))
     return pub

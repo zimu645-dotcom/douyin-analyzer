@@ -7,7 +7,8 @@
 import json, os, sys, io
 
 from _paths import BASE
-PROFILE = os.path.join(BASE, "chrome_profile")
+import accounts
+PROFILE = accounts.profile_dir()
 # 指向项目内 browsers，不依赖系统环境变量
 os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", os.path.join(BASE, "browsers"))
 
@@ -75,10 +76,11 @@ def fetch_stats(video_ids, sec_user_id=None):
     if not video_ids and not sec_user_id:
         return {"videos": {}, "author": None}
     from playwright.sync_api import sync_playwright
+    import browser_util
     try:
         with sync_playwright() as p:
-            ctx = p.chromium.launch_persistent_context(
-                user_data_dir=PROFILE, headless=True,
+            ctx = browser_util.launch_persistent(
+                p, PROFILE, headless=True,
                 args=["--disable-blink-features=AutomationControlled"])
             pg = ctx.pages[0] if ctx.pages else ctx.new_page()
             # 先建立会话（打开抖音首页拿 cookies/会话）

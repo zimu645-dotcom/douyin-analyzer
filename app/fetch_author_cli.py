@@ -5,7 +5,8 @@
 import sys, os, json, time, re
 
 from _paths import BASE
-PROFILE_DIR = os.path.join(BASE, "chrome_profile")
+import accounts
+PROFILE_DIR = accounts.profile_dir()
 OUT = os.path.join(BASE, "app_output", "videos.json")
 # 指向项目内 browsers，不依赖系统环境变量
 os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", os.path.join(BASE, "browsers"))
@@ -35,9 +36,10 @@ def main():
     from playwright.sync_api import sync_playwright
 
     videos = {}
+    import browser_util
     with sync_playwright() as p:
-        browser = p.chromium.launch_persistent_context(
-            user_data_dir=PROFILE_DIR, headless=True,
+        browser = browser_util.launch_persistent(
+            p, PROFILE_DIR, headless=True,
             args=["--disable-blink-features=AutomationControlled"])
         pg = browser.pages[0] if browser.pages else browser.new_page()
         pg.route("**/*", lambda route: route.abort()

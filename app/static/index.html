@@ -210,7 +210,12 @@ td { padding: 9px 12px; border: 1px solid var(--border); vertical-align: top; li
 .vision-item:hover { transform: translateY(-2px); }
 .vision-item .v-img { width: 100%; border-radius: 8px; margin-bottom: 8px; display: block; border: 1px solid var(--border); }
 .vision-item .v-time { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 6px; }
-.vision-item .v-text { font-size: 13px; line-height: 1.7; }
+.vision-item .v-text { font-size: 13px; line-height: 1.75; white-space: pre-line; }
+.vision-item .v-text strong { color: var(--purple); }
+.vision-item .v-head { font-weight: 700; color: var(--purple); margin-top: 6px; }
+.vision-item .v-typing { color: var(--text-2); }
+.vision-item .cursor { color: var(--purple); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
 
 /* ===== 历史记录 ===== */
 .history-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; transition: background .3s; }
@@ -319,8 +324,6 @@ td { padding: 9px 12px; border: 1px solid var(--border); vertical-align: top; li
         <input type="checkbox" id="mod-analysis" style="width:16px;height:16px">AI 分析</label>
       <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-3);cursor:pointer">
         <input type="checkbox" id="mod-rewrite" style="width:16px;height:16px">润色改写</label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-3);cursor:pointer">
-        <input type="checkbox" id="mod-versions" style="width:16px;height:16px">多版本仿写</label>
       <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-3);cursor:pointer" title="勾选后下载视频做画面分析（慢）">
         <input type="checkbox" id="mod-vision" style="width:16px;height:16px">画面分析</label>
     </div>
@@ -375,7 +378,7 @@ td { padding: 9px 12px; border: 1px solid var(--border); vertical-align: top; li
         <div class="cfg-row"><label>Base URL</label><input id="cfg-f-url" placeholder="https://api.xiaomimimo.com/v1/chat/completions"></div>
         <div class="cfg-row"><label>模型名</label><input id="cfg-f-model" list="model-list-mimo" placeholder="mimo-v2.5" style="flex:1">
           <datalist id="model-list-mimo">
-            <option value="mimo-v2.5"><option value="mimo-v2.6"><option value="mimo-v1.5">
+            <option value="mimo-v2.6-flash"><option value="mimo-v2.6-pro">
           </datalist></div>
         <div class="cfg-row"><label>API Key</label><input id="cfg-f-keyfile" type="password" placeholder="sk-xxx（留空则不修改）" autocomplete="off"></div>
       </div>
@@ -383,14 +386,42 @@ td { padding: 9px 12px; border: 1px solid var(--border); vertical-align: top; li
         <h4>🎬 视觉模型（画面分析）</h4>
         <div class="cfg-row"><label>服务商</label><input id="cfg-v-provider" placeholder="mimo"></div>
         <div class="cfg-row"><label>Base URL</label><input id="cfg-v-url" placeholder="https://api.xiaomimimo.com/v1/chat/completions"></div>
-        <div class="cfg-row"><label>模型名</label><input id="cfg-v-model" list="model-list-mimo" placeholder="mimo-v2.5" style="flex:1"></div>
+        <div class="cfg-row"><label>模型名</label><input id="cfg-v-model" list="model-list-mimo" placeholder="mimo-v2.6-flash" style="flex:1"></div>
         <div class="cfg-row"><label>API Key</label><input id="cfg-v-keyfile" type="password" placeholder="sk-xxx（留空则不修改）" autocomplete="off"></div>
-        <div class="cfg-row"><label>抽帧间隔(秒)</label><input id="cfg-v-interval" type="number" min="1" max="30" value="5"></div>
-        <div class="cfg-row"><label>最大帧数</label><input id="cfg-v-maxframes" type="number" min="1" max="30" value="12"></div>
+        <div class="cfg-row"><label>每秒抽帧数 fps</label><input id="cfg-v-fps" type="number" min="0.1" max="10" step="0.1" value="1"></div>
         <div class="cfg-row"><label>启用画面分析</label><input id="cfg-v-enabled" type="checkbox" checked style="width:18px;height:18px;margin-left:8px"></div>
+        <div class="cfg-tip">fps 默认 1（每秒看 1 帧），范围 0.1～10；每 3 秒 1 帧填 0.333。视频压缩到 480p 后上传 URL 给 MiMo。</div>
+      </div>
+      <div class="cfg-section">
+        <h4>🎙 语音转写引擎</h4>
+        <div class="cfg-row"><label>转写方式</label>
+          <select id="cfg-a-engine" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:#fff">
+            <option value="cloud">☁️ 云端转写（硅基流动 · 免下载模型 · 推荐）</option>
+            <option value="local">💻 本地 faster-whisper（需下载模型）</option>
+          </select>
+        </div>
+        <div class="cfg-row"><label>Base URL</label><input id="cfg-a-url" placeholder="https://api.siliconflow.cn/v1/audio/transcriptions"></div>
+        <div class="cfg-row"><label>模型名</label><input id="cfg-a-model" list="model-list-asr" placeholder="FunAudioLLM/SenseVoiceSmall" style="flex:1">
+          <datalist id="model-list-asr">
+            <option value="FunAudioLLM/SenseVoiceSmall"><option value="TeleAI/TeleSpeechASR">
+          </datalist></div>
+        <div class="cfg-row"><label>API Key</label><input id="cfg-a-keyfile" type="password" placeholder="sk-xxx（留空则不修改）" autocomplete="off"></div>
+        <div class="cfg-tip">云端转写用硅基流动：<a href="https://cloud.siliconflow.cn" target="_blank">cloud.siliconflow.cn</a> 注册拿 Key，SenseVoiceSmall 免费且中文效果好，音频限制：单文件 ≤50MB / ≤1小时。云端失败自动回退本地模型（如已安装）。</div>
+      </div>
+      <div class="cfg-section">
+        <h4>👤 抖音账号</h4>
+        <div class="cfg-row"><label>当前账号</label>
+          <select id="cfg-account" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:#fff"></select>
+          <button class="btn sm" onclick="reloginAccount()" style="margin-left:8px">更换登录账户</button>
+        </div>
+        <div class="cfg-tip" id="account-tip">登录态长期保存；点击“更换登录账户”会重新扫码并切换为当前账号。</div>
       </div>
       <div class="cfg-section">
         <h4>📊 飞书多维表格</h4>
+        <div class="cfg-row"><label>多维表格链接</label>
+          <input id="cfg-fs-url" placeholder="粘贴整条链接，自动解析 Token 和表 ID" style="flex:1">
+          <button class="btn sm" onclick="parseFeishuUrl()" style="margin-left:8px">解析</button>
+        </div>
         <div class="cfg-row"><label>App ID</label><input id="cfg-fs-appid" placeholder="飞书应用 App ID"></div>
         <div class="cfg-row"><label>App Secret</label><input id="cfg-fs-appsecret" type="password" placeholder="飞书应用 App Secret"></div>
         <div class="cfg-row"><label>多维表格 Token</label><input id="cfg-fs-apptoken" placeholder="从URL获取: feishu.cn/base/xxx"></div>
@@ -461,7 +492,6 @@ const _subTasks = {
   transcribe: { label: '转写', status: 'pending', start: null, end: null },
   rewrite: { label: '润色', status: 'pending', start: null, end: null },
   analysis: { label: '分析', status: 'pending', start: null, end: null },
-  versions: { label: '仿写', status: 'pending', start: null, end: null },
   stats: { label: '数据', status: 'pending', start: null, end: null },
   vision: { label: '画面', status: 'pending', start: null, end: null },
 };
@@ -516,7 +546,6 @@ const SECTIONS = [
   {key: 'original', icon: '📄', title: '三、原内容（转写）'},
   {key: 'rewrite', icon: '✨', title: '四、润色改写'},
   {key: 'vision', icon: '🎬', title: '五、画面分析'},
-  {key: 'versions', icon: '🎭', title: '六、多版本仿写'},
 ];
 
 // ===== 视图切换 =====
@@ -919,11 +948,7 @@ async function recoverState() {
 
       // 恢复画面分析
       if (live.vision && live.vision.length > 0) {
-        const vHtml = live.vision.map(f => {
-          const img = f.image ? `<img src="${esc(f.image)}" class="v-img" onerror="this.style.display='none'">` : '';
-          return `<div class="vision-item">${img}<div class="v-time">⏱ ${f.time}s</div><div class="v-text">${esc(f.analysis || '')}</div></div>`;
-        }).join('');
-        setSecContent('vision', `<div class="vision-block">${vHtml}</div>`);
+        renderVisionAll();
       }
 
       // 恢复子任务进度
@@ -1054,11 +1079,10 @@ function renderReport(rpt) {
   if (rpt.stats) renderStatsPills(rpt.stats);
   // 画面分析
   if (rpt.vision && rpt.vision.length) {
-    const vHtml = rpt.vision.map(f => {
-      const img = f.image ? `<img src="${esc(f.image)}" class="v-img" onerror="this.style.display='none'">` : '';
-      return `<div class="vision-item">${img}<div class="v-time">⏱ ${f.time}s</div><div class="v-text">${esc(f.analysis || '')}</div></div>`;
-    }).join('');
-    setSecContent('vision', `<div class="vision-block">${vHtml}</div>`);
+    live = live || {};
+    live.vision = rpt.vision;
+    live.vision_streaming = {};
+    renderVisionAll();
   }
   // 导出按钮
   renderExports(rpt.video_id);
@@ -1122,10 +1146,10 @@ function handleEvent(d) {
         live.url = d.url || live.url;
       } else {
         _recoveredFromLive = false;
-        live = {video_id: vid, title: d.title || '视频分析中...', url: d.url || ''};
+        live = {video_id: vid, title: d.title || '视频分析中...', url: d.url || '', duration: 0};
         resetWorkbench();
         document.getElementById('live-title').textContent = d.title || '视频分析中...';
-        document.getElementById('live-meta').textContent = '🔽 下载完成 · 开始转写';
+        document.getElementById('live-meta').textContent = '🔽 ' + (d.url || vid) + ' · 下载完成';
         updateBanner('running', '正在转写: ' + (d.title || vid).slice(0, 22), '');
       }
       startSubTask('download');
@@ -1183,17 +1207,30 @@ function handleEvent(d) {
       renderSubTasks();
       updateHP(55);
       break;
+    case 'vision_segment_start':
+      if (_subTasks.vision.status !== 'active') {
+        startSubTask('vision');
+        renderSubTasks();
+      }
+      live.vision_streaming = live.vision_streaming || {};
+      live.vision_streaming[d.index] = { text: '', time: d.time, total: d.total };
+      renderVisionStreaming('第 ' + d.index + '/' + d.total + ' 段分析中…');
+      break;
+    case 'vision_token': {
+      live.vision_streaming = live.vision_streaming || {};
+      const slot = live.vision_streaming[d.index] || (live.vision_streaming[d.index] = { text: '', time: d.time, total: d.total });
+      slot.text += (d.tok || '');
+      renderVisionStreaming();
+      break;
+    }
     case 'vision_frame':
       live.vision = (live.vision || []).concat([d.frame]);
+      if (live.vision_streaming) delete live.vision_streaming[String(parseInt(d.frame.time / 120) + 1)];
       if (_subTasks.vision.status === 'pending') {
         startSubTask('vision');
         renderSubTasks();
       }
-      const vHtml = (live.vision || []).map(f => {
-        const img = f.image ? `<img src="${esc(f.image)}" class="v-img" onerror="this.style.display='none'">` : '';
-        return `<div class="vision-item">${img}<div class="v-time">⏱ ${f.time}s</div><div class="v-text">${esc(f.analysis || '')}</div></div>`;
-      }).join('');
-      setSecContent('vision', `<div class="vision-block">${vHtml}</div>`);
+      renderVisionAll();
       updateHP(75);
       break;
     case 'analysis_token':
@@ -1373,7 +1410,6 @@ function getModules() {
   return {
     analysis: document.getElementById('mod-analysis').checked,
     rewrite: document.getElementById('mod-rewrite').checked,
-    versions: document.getElementById('mod-versions').checked,
     vision: document.getElementById('mod-vision').checked,
   };
 }
@@ -1385,9 +1421,10 @@ async function startSingle() {
   const modules = getModules();
   const r = await fetch('/api/single', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url, modules}) });
   const j = await r.json().catch(() => ({}));
-  if (j.error) {
-    alert('任务启动失败: ' + j.error);
-    updateBanner('idle', '任务启动失败', '');
+  if (!r.ok || j.error || j.ok === false) {
+    const msg = j.error || j.detail || ('HTTP ' + r.status);
+    alert('任务启动失败: ' + msg);
+    updateBanner('idle', '任务启动失败: ' + msg, '');
     return;
   }
   updateBanner('running', '任务已提交，解析链接中...', '');
@@ -1406,7 +1443,12 @@ async function startAuthor() {
   const modules = getModules();
   const r = await fetch('/api/author', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url, count, modules}) });
   const j = await r.json().catch(() => ({}));
-  if (j.error) { alert('任务启动失败: ' + j.error); updateBanner('idle', '任务启动失败', ''); return; }
+  if (!r.ok || j.error || j.ok === false) {
+    const msg = j.error || j.detail || ('HTTP ' + r.status);
+    alert('任务启动失败: ' + msg);
+    updateBanner('idle', '任务启动失败: ' + msg, '');
+    return;
+  }
   updateBanner('running', '正在抓取主页视频清单...', '');
 }
 function showParsingState(url, isAuthor) {
@@ -1523,18 +1565,23 @@ async function viewLiveReport(vid) {
   for (const k in _subTasks) doneSubTask(k);
   renderSubTasks();
   const an = d.analysis || {};
+  const linkLine = (d.source_url || d.url) ? `<div class="ov-card" style="grid-column:1/-1"><div class="ov-label">🔗 原链接</div><div class="ov-val" style="word-break:break-all">${esc(d.source_url || d.url)}</div></div>` : '';
   if (an.summary) {
-    setSecContent('overview', `<div class="overview-grid">
+    setSecContent('overview', `<div class="overview-grid">${linkLine}
       <div class="ov-card"><div class="ov-label">💡 一句话总结</div><div class="ov-val">${esc(an.summary)}</div></div>
       <div class="ov-card"><div class="ov-label">🎯 场景</div><div class="ov-val">${esc(an.scenes || '')}</div></div>
       <div class="ov-card"><div class="ov-label">🏗 结构</div><div class="ov-val">${esc(an.structure || '')}</div></div></div>`);
+  } else if (linkLine) {
+    setSecContent('overview', `<div class="overview-grid">${linkLine}</div>`);
   }
   if (an.highlights && an.highlights.length) setSecContent('learn', `<table><tr><th>值得学的点</th><th>原片怎么做的</th><th>仿写时怎么用</th></tr>${an.highlights.map(h => `<tr><td>${esc(h.point)}</td><td>${esc(h.how)}</td><td>${esc(h.use)}</td></tr>`).join('')}</table>`);
   setSecContent('original', (d.original_segments || []).map(s => `<div class="seg-line"><span class="ts">[${fmtTs(s.start)}]</span>${esc(s.text)}</div>`).join(''));
   if (d.rewritten_segments) setSecContent('rewrite', d.rewritten_segments.map(s => `<div class="seg-line"><span class="ts green">[${fmtTs(s.start)}]</span>${esc(s.rewritten)}</div>`).join(''));
   if (d.vision && d.vision.length) {
-    const vh = d.vision.map(f => `<div class="vision-item">${f.image ? `<img src="${esc(f.image)}" class="v-img">` : ''}<div class="v-time">⏱ ${f.time}s</div><div class="v-text">${esc(f.analysis || '')}</div></div>`).join('');
-    setSecContent('vision', `<div class="vision-block">${vh}</div>`);
+    live = live || {};
+    live.vision = d.vision;
+    live.vision_streaming = {};
+    renderVisionAll();
   }
   if (d.versions) {
     let vh = ''; let vi = 0;
@@ -1599,6 +1646,39 @@ async function batchExportFeishu() {
 
 function fmtTs(sec) { const m = Math.floor(sec / 60), s = Math.floor(sec % 60); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtTime(sec) {
+  const n = Math.max(0, Math.floor(Number(sec) || 0));
+  return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+}
+// 画面分析：已完成段落 + 正在流式输出的段落
+function renderVisionAll(statusText) {
+  const done = (live && live.vision) || [];
+  const streaming = (live && live.vision_streaming) || {};
+  let html = done.map(f => {
+    const img = f.image ? `<img src="${esc(f.image)}" class="v-img" onerror="this.style.display='none'">` : '';
+    return `<div class="vision-item">${img}<div class="v-time">⏱ ${fmtTime(f.time)}</div><div class="v-text">${fmtVision(f.analysis || '')}</div></div>`;
+  }).join('');
+  for (const k of Object.keys(streaming)) {
+    const s = streaming[k];
+    const head = `<div class="v-time">⏱ ${fmtTime(s.time)} · 第 ${k}/${s.total || '?'} 段</div>`;
+    if (!s.text) {
+      html += `<div class="vision-item">${head}<div class="v-text v-typing">${esc(statusText || '正在分析…')}</div></div>`;
+    } else {
+      html += `<div class="vision-item">${head}<div class="v-text v-typing">${fmtVision(s.text)}<span class="cursor">▍</span></div></div>`;
+    }
+  }
+  setSecContent('vision', `<div class="vision-block">${html}</div>`);
+  return html;
+}
+function renderVisionStreaming(statusText) { renderVisionAll(statusText); }
+// 画面分析：轻量格式化（去 Markdown 符号、保留分行、加粗小标题）
+function fmtVision(s) {
+  let t = esc(s || '');
+  t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/^#{1,4}\s*(.+)$/gm, '<div class="v-head">$1</div>');
+  t = t.replace(/^[-*]\s+/gm, '· ');
+  return t;
+}
 function escapeHtml(s) { return esc(s); }
 
 // ===== 设置面板 =====
@@ -1614,8 +1694,46 @@ function saveKeyPref(remember, keys) {
   try { localStorage.setItem(API_KEY_STORE, JSON.stringify({ remember, keys })); } catch (e) {}
 }
 
+async function loadAccounts() {
+  try {
+    const r = await fetch('/api/accounts');
+    const d = await r.json();
+    const sel = document.getElementById('cfg-account');
+    if (!sel) return;
+    sel.innerHTML = '';
+    (d.accounts || []).forEach(a => {
+      const o = document.createElement('option');
+      o.value = a.name;
+      o.textContent = a.name + (a.logged_in ? ' ✅ 已登录' : ' ⚠️ 未登录');
+      if (a.name === d.active) o.selected = true;
+      sel.appendChild(o);
+    });
+    const tip = document.getElementById('account-tip');
+    if (tip) tip.textContent = d.active
+      ? ('当前使用: ' + d.active + '（登录态保存在本地，可长期免扫码）')
+      : '尚未登录，请选择账户后点击“更换登录账户”';
+  } catch (e) {}
+}
+async function reloginAccount() {
+  const name = document.getElementById('cfg-account').value;
+  if (!name) { alert('请先选择要登录的账户'); return; }
+  if (!confirm('确定更换登录账户「' + name + '」？会打开浏览器等待扫码。')) return;
+  const r = await fetch('/api/accounts/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name }) });
+  const j = await r.json();
+  alert(j.ok ? '已打开登录窗口，请扫码；登录完成后自动切换到该账户' : '❌ ' + (j.error || '登录启动失败'));
+}
+function parseFeishuUrl() {
+  const u = document.getElementById('cfg-fs-url').value.trim();
+  if (!u) { alert('请先粘贴多维表格链接'); return; }
+  const m = u.match(/\/base\/([A-Za-z0-9]+)/);
+  const t = u.match(/[?&]table=([A-Za-z0-9]+)/);
+  if (m) document.getElementById('cfg-fs-apptoken').value = m[1];
+  if (t) document.getElementById('cfg-fs-tableid').value = t[1];
+  if (!m) alert('未识别到 app_token，请确认为飞书多维表格链接');
+}
 async function openSettings() {
   document.getElementById('settings-modal').classList.remove('hidden');
+  loadAccounts();
   try {
     const r = await fetch('/api/config');
     const c = await r.json();
@@ -1627,13 +1745,18 @@ async function openSettings() {
     fill('cfg-f-model', rw.fallback?.model);
     fill('cfg-v-provider', v.provider); fill('cfg-v-url', v.base_url);
     fill('cfg-v-model', v.model);
-    fill('cfg-v-interval', v.frame_interval); fill('cfg-v-maxframes', v.max_frames);
+    fill('cfg-v-fps', v.fps !== undefined ? v.fps : '1');
     document.getElementById('cfg-v-enabled').checked = v.enabled !== false;
+    // 语音转写引擎（asr）
+    const a = c.asr || {};
+    const engSel = document.getElementById('cfg-a-engine');
+    if (engSel) engSel.value = (a.engine === 'local') ? 'local' : 'cloud';
+    fill('cfg-a-url', a.base_url); fill('cfg-a-model', a.model);
     // API Key：勾选「长期保存」则回显缓存的 key（免填），不勾选留空由用户自行输入
     const pref = loadKeyPref();
     document.getElementById('cfg-remember-key').checked = pref.remember;
     if (pref.remember) {
-      const cacheMap = { 'cfg-p-keyfile': pref.keys.p, 'cfg-f-keyfile': pref.keys.f, 'cfg-v-keyfile': pref.keys.v };
+      const cacheMap = { 'cfg-p-keyfile': pref.keys.p, 'cfg-f-keyfile': pref.keys.f, 'cfg-v-keyfile': pref.keys.v, 'cfg-a-keyfile': pref.keys.a };
       Object.entries(cacheMap).forEach(([id, val]) => { if (val) { const el = document.getElementById(id); if (el) el.value = val; } });
     }
 
@@ -1644,6 +1767,7 @@ async function openSettings() {
       fill('cfg-fs-appid', fc.app_id);
       fill('cfg-fs-apptoken', fc.app_token);
       fill('cfg-fs-tableid', fc.table_id);
+      fill('cfg-fs-url', fc.feishu_url);
       document.getElementById('cfg-fs-auto').checked = fc.auto_export === true;
       // app_secret 不回显
     } catch (e) {}
@@ -1661,8 +1785,12 @@ async function saveSettings() {
     },
     vision: {
       provider: g('cfg-v-provider'), base_url: g('cfg-v-url'), model: g('cfg-v-model'), key: mk('cfg-v-keyfile'),
-      frame_interval: parseInt(g('cfg-v-interval')) || 5, max_frames: parseInt(g('cfg-v-maxframes')) || 12,
+      fps: parseFloat(g('cfg-v-fps')) || 1,
       enabled: document.getElementById('cfg-v-enabled').checked,
+    },
+    asr: {
+      engine: document.getElementById('cfg-a-engine').value,
+      base_url: g('cfg-a-url'), model: g('cfg-a-model'), key: mk('cfg-a-keyfile'),
     },
     remember_key: document.getElementById('cfg-remember-key').checked,
   };
@@ -1678,6 +1806,7 @@ async function saveSettings() {
       p: g('cfg-p-keyfile').trim() || prev.p || '',
       f: g('cfg-f-keyfile').trim() || prev.f || '',
       v: g('cfg-v-keyfile').trim() || prev.v || '',
+      a: g('cfg-a-keyfile').trim() || prev.a || '',
     });
   } else {
     saveKeyPref(false, {});
@@ -1685,6 +1814,7 @@ async function saveSettings() {
 
   // 保存飞书配置
   const fsPayload = {
+    feishu_url: g('cfg-fs-url'),
     app_id: g('cfg-fs-appid'),
     app_secret: g('cfg-fs-appsecret'),
     app_token: g('cfg-fs-apptoken'),
@@ -1707,7 +1837,7 @@ async function clearConfig() {
     const j = await r.json();
     if (j.ok) {
       localStorage.removeItem(API_KEY_STORE);  // 同时清掉本机缓存的 key
-      ['cfg-p-keyfile', 'cfg-f-keyfile', 'cfg-v-keyfile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['cfg-p-keyfile', 'cfg-f-keyfile', 'cfg-v-keyfile', 'cfg-a-keyfile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       alert('✅ ' + (j.message || '已清除 API Key'));
     } else {
       alert('❌ 清除失败: ' + (j.message || ''));
@@ -1773,22 +1903,7 @@ renderSkeleton();
 connectSSE();
 recoverState();
 
-// 网页心跳：每5秒通知服务端「网页还开着」
-setInterval(function() {
-  try { fetch('/api/heartbeat', {method: 'GET', cache: 'no-store'}).catch(function(){}); } catch(e) {}
-}, 5000);
-
-// 页面关闭前通知服务端：3 秒后停止服务（刷新时新页面会立即发心跳取消）
-// beforeunload + pagehide 双事件、sendBeacon + fetch(keepalive) 双通道，最大化关闭信号可靠性
-function _notifyPageClosing() {
-  try { navigator.sendBeacon('/api/page-closing'); } catch (e) {}
-  try { fetch('/api/page-closing', { method: 'POST', keepalive: true }).catch(function(){}); } catch (e) {}
-}
-window.addEventListener('beforeunload', _notifyPageClosing);
-window.addEventListener('pagehide', _notifyPageClosing);
-
-// 页面加载立即心跳一次：取消刷新前的待定停止，保证刷新不误停服务
-try { fetch('/api/heartbeat', {method: 'GET', cache: 'no-store'}).catch(function(){}); } catch(e) {}
+// 心跳自动停止机制已移除：服务常驻，页面关闭不影响服务
 </script>
 </body>
 </html>

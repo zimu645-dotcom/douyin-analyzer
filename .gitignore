@@ -37,3 +37,11 @@ browsers/
 # ===== ffmpeg 二进制（运行时使用，体积大，不提交） =====
 ffmpeg.exe
 ffprobe.exe
+
+# ===== 打包产物（体积大，不提交） =====
+build/
+dist/
+*.exe
+
+# ===== 多账号登录态（含隐私，不提交） =====
+accounts/

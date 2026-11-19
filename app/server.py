@@ -79,16 +79,29 @@ def spawn_worker(args):
             pass
     # 启动子进程（保存引用，供「停止拆解」终止）
     if getattr(sys, "frozen", False):
-        # 打包模式：启动同目录下的 worker.exe
-        _exe_dir = os.path.dirname(sys.executable)
-        cmd = [os.path.join(_exe_dir, "worker.exe")] + args
-        _cwd = _exe_dir
+        # 单文件 exe：自身即以 --worker 子命令启动任务
+        cmd = [sys.executable, "--worker"] + args
+        _cwd = os.path.dirname(sys.executable)
     else:
-        cmd = [VENV_PY, WORKER] + args
+        # 与 start.bat 一致：有 venv 用 venv，没有则沿用启动服务的 Python。
+        # 云端转写方案无需创建 venv，不能再写死不存在的 venv 路径。
+        worker_py = VENV_PY if os.path.exists(VENV_PY) else sys.executable
+        cmd = [worker_py, WORKER] + args
         _cwd = os.path.dirname(WORKER)
-    proc = subprocess.Popen(cmd, cwd=_cwd,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0)
+    try:
+        # 保留 worker 输出，任务异常时可直接查看 app_output/worker.log
+        log_path = os.path.join(OUTPUT_DIR, "worker.log")
+        with open(log_path, "a", encoding="utf-8") as logf:
+            logf.write(f"\n===== {time.strftime('%Y-%m-%d %H:%M:%S')} {cmd} =====\n")
+            logf.flush()
+            proc = subprocess.Popen(cmd, cwd=_cwd,
+                                    stdout=logf, stderr=subprocess.STDOUT,
+                                    creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0)
+    except Exception as e:
+        with JOB_LOCK:
+            JOB["state"] = "error"
+            JOB["message"] = f"任务进程启动失败: {e}"
+        raise HTTPException(status_code=500, detail=f"任务进程启动失败: {e}")
     _WORKER_PROC = proc
     return True
 
@@ -187,53 +200,24 @@ async def api_upload(file: UploadFile = File(...)):
     return {"ok": True, "file": fname}
 
 
-# ---------------- 心跳（网页关闭自动停止服务） ----------------
+# ---------------- 心跳接口（保留兼容，已无自动停止逻辑） ----------------
 _LAST_HB = 0.0
-_PENDING_STOP = None   # 页面明确关闭后的停止时间
 _HB_LOCK = threading.Lock()
 
 
 @app.get("/api/heartbeat")
 def api_heartbeat():
-    """网页心跳：收到即表示网页还开着，取消待定停止"""
-    global _LAST_HB, _PENDING_STOP
+    """网页心跳：仅维持兼容，服务不再因心跳超时停止"""
+    global _LAST_HB
     with _HB_LOCK:
         _LAST_HB = time.time()
-        _PENDING_STOP = None
     return {"ok": True}
 
 
 @app.post("/api/page-closing")
 def api_page_closing():
-    """页面关闭信号：3 秒后停止服务（刷新时新页面会立即发心跳取消）"""
-    global _PENDING_STOP
-    with _HB_LOCK:
-        _PENDING_STOP = time.time() + 3
+    """页面关闭信号：已忽略，服务常驻"""
     return {"ok": True}
-
-
-def _hb_watchdog():
-    """守护线程：
-    - 收到「页面关闭」信号 → 3 秒后停止（刷新时新页面心跳会取消）
-    - 未收到信号但 20 秒无心跳 → 兜底停止（异常关闭）"""
-    global _LAST_HB, _PENDING_STOP
-    got_first = False
-    while True:
-        time.sleep(1)
-        with _HB_LOCK:
-            hb = _LAST_HB
-            pend = _PENDING_STOP
-        now = time.time()
-        if hb > 0:
-            got_first = True
-        # 页面明确关闭：3 秒停止窗口
-        if pend and now >= pend:
-            print("网页已关闭，停止服务", flush=True)
-            os._exit(0)
-        # 心跳超时兜底（异常关闭，如浏览器崩溃/强杀）
-        if got_first and now - hb > 20:
-            print("网页心跳超时，自动停止服务", flush=True)
-            os._exit(0)
 
 
 @app.get("/api/status")
@@ -451,15 +435,26 @@ def api_save_config(req: dict):
                         cfg["rewrite"][eng][field] = e[field]
     if "vision" in req:
         v = req["vision"]
-        for field in ("provider", "base_url", "model", "key_file", "key", "frame_interval", "max_frames", "enabled"):
+        for field in ("provider", "base_url", "model", "key_file", "key", "fps", "enabled"):
             if field in v and v[field] is not None:
                 cfg["vision"][field] = v[field]
+        if "fps" in v:
+            try:
+                cfg["vision"]["fps"] = max(0.1, min(10.0, float(v["fps"])))
+            except (TypeError, ValueError):
+                pass
     if "whisper" in req:
         w = req["whisper"]
         if "use_title_prompt" in w and w["use_title_prompt"] is not None:
             cfg.setdefault("whisper", {})["use_title_prompt"] = bool(w["use_title_prompt"])
         if "hotwords" in w and isinstance(w["hotwords"], list):
             cfg.setdefault("whisper", {})["hotwords"] = [str(x).strip() for x in w["hotwords"] if str(x).strip()]
+    if "asr" in req:
+        a = req["asr"]
+        # engine/base_url/model：非空才更新（key 留空表示不修改）
+        for field in ("engine", "base_url", "model", "key"):
+            if field in a and a[field] not in (None, ""):
+                cfg.setdefault("asr", {})[field] = a[field]
     # 长期保存标记：勾选才持久保存 key；不勾选任务完成后自动清除 key
     if "remember_key" in req:
         cfg["remember_key"] = bool(req["remember_key"])
@@ -480,10 +475,11 @@ def api_clear_config():
             if "key_file" in eng:
                 eng["key_file"] = ""
 
-    # rewrite 是子引擎字典（primary/fallback），vision 是单引擎
+    # rewrite 是子引擎字典（primary/fallback），vision/asr 是单引擎
     for eng in (cfg.get("rewrite", {}) or {}).values():
         _wipe(eng)
     _wipe(cfg.get("vision", {}))
+    _wipe(cfg.get("asr", {}))
     app_config.save_config(cfg)
     return {"ok": True, "message": "已清除 API Key，模型名与服务器链接已保留"}
 
@@ -667,6 +663,51 @@ def api_feishu_test():
         return {"ok": False, "message": str(e)}
 
 
+# ---------------- 多账号 ----------------
+@app.get("/api/accounts")
+def api_accounts():
+    import accounts
+    return {"ok": True, "active": accounts.active_name() or "default",
+            "accounts": accounts.list_accounts()}
+
+
+@app.post("/api/accounts/switch")
+def api_switch_account(req: dict):
+    import accounts
+    try:
+        name = accounts.set_active(req.get("name", ""))
+        return {"ok": True, "active": name}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@app.post("/api/accounts/login")
+def api_login_account(req: dict):
+    """运行登录脚本（会弹出浏览器扫码），登录态长期保存到该账号 profile"""
+    import accounts
+    name = accounts.safe_name(req.get("name", "")) or accounts.active_name() or "default"
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    # 不新增账号：只允许登录已有账号（default 为内置账号）
+    if name != "default":
+        existing = {a["name"] for a in accounts.list_accounts()}
+        if name not in existing:
+            return {"ok": False, "error": "账号不存在（已禁用新增账号）"}
+    # 登录按钮总是强制重新扫码：清掉旧 session，避免脚本一启动就判定已登录而闪退
+    if getattr(sys, "frozen", False):
+        cmd = [sys.executable, "--login", "--account", name, "--force"]
+        cwd = os.path.dirname(sys.executable)
+    else:
+        worker_py = VENV_PY if os.path.exists(VENV_PY) else sys.executable
+        cmd = [worker_py, os.path.join(app_dir, "douyin_login.py"), "--account", name, "--force"]
+        cwd = app_dir
+    try:
+        subprocess.Popen(cmd, cwd=cwd,
+                         creationflags=subprocess.CREATE_NEW_CONSOLE if hasattr(subprocess, "CREATE_NEW_CONSOLE") else 0)
+        return {"ok": True, "message": f"已启动 {name} 的登录窗口，请扫码"}
+    except Exception as e:
+        return {"ok": False, "error": f"登录脚本启动失败: {e}"}
+
+
 @app.get("/api/config/feishu")
 def api_get_feishu_config():
     """获取飞书配置（脱敏）"""
@@ -674,6 +715,7 @@ def api_get_feishu_config():
     cfg = app_config.load_config().get("feishu", {})
     return {
         "app_id": cfg.get("app_id", ""),
+        "feishu_url": cfg.get("feishu_url", ""),
         "app_token": cfg.get("app_token", ""),
         "table_id": cfg.get("table_id", ""),
         "auto_export": cfg.get("auto_export", False),
@@ -688,8 +730,17 @@ def api_save_feishu_config(req: dict):
     cfg = app_config.load_config()
     feishu = cfg.setdefault("feishu", {})
 
+    # 支持直接粘贴多维表格链接，自动解析 app_token / table_id
+    feishu_url = (req.get("feishu_url") or "").strip()
+    if feishu_url:
+        m = re.search(r"/base/([A-Za-z0-9]+)", feishu_url)
+        if m:
+            feishu["app_token"] = m.group(1)
+        m2 = re.search(r"[?&]table=([A-Za-z0-9]+)", feishu_url)
+        if m2:
+            feishu["table_id"] = m2.group(1)
     # 更新配置（允许清空字段）
-    for field in ("app_id", "app_token", "table_id"):
+    for field in ("app_id", "app_token", "table_id", "feishu_url"):
         if field in req:
             feishu[field] = req[field] or ""
     # app_secret 特殊处理：只有传入非空值才更新，避免误清空
@@ -704,11 +755,11 @@ def api_save_feishu_config(req: dict):
 
 # ---------------- 启动 ----------------
 def run(watchdog=False):
+    """watchdog 参数已弃用：心跳自动停止机制已移除，服务常驻；
+    仅保留「服务异常退出后自动重启」的守护循环"""
     import uvicorn
     import time as _t
     print("启动抖音视频拆解报告服务: http://127.0.0.1:8321")
-    # 心跳看门狗：网页打开时持续心跳，网页关闭 20 秒后自动停止服务
-    threading.Thread(target=_hb_watchdog, daemon=True).start()
     while True:
         try:
             # workers=1 单进程，但用线程模式避免同步阻塞互相影响
@@ -722,7 +773,7 @@ def run(watchdog=False):
             print(f"服务异常退出: {e}", flush=True)
         if not watchdog:
             break
-        # 看门狗：3 秒后自动重启，保证服务常驻
+        # 守护：3 秒后自动重启
         print("服务崩溃，3 秒后自动重启...", flush=True)
         _t.sleep(3)
 

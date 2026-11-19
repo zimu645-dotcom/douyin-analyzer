@@ -112,7 +112,7 @@ def process_one(vid, title, url, modules=None):
     modules = modules or {}
     use_analysis = modules.get("analysis", True)
     use_rewrite = modules.get("rewrite", True)
-    use_versions = modules.get("versions", True)
+    use_versions = False   # 多版本仿写已移除
     use_vision_requested = modules.get("vision", False)
     _t_start = time.time()
     _done_times = {}  # 各并行阶段耗时（供 done 事件显示）
@@ -130,7 +130,9 @@ def process_one(vid, title, url, modules=None):
 
     # 抓互动数据（yt-dlp，与转写并行）
     write_status(video_id=vid, status="transcribing", title=api_title, progress="转写中", percent=20, stage="transcribing")
-    write_event({"type": "video_start", "video_id": vid, "title": api_title, "url": url})
+    write_event({"type": "video_start", "video_id": vid, "title": api_title,
+                 "url": url, "source_url": url,
+                 "canonical_url": f"https://www.douyin.com/video/{vid}"})
 
     def on_seg(seg):
         # 转写逐段实时推送
@@ -139,7 +141,16 @@ def process_one(vid, title, url, modules=None):
         write_event({"type": "transcribe_segment", "video_id": vid, "segment": seg})
 
     _t_trans_start = time.time()
-    data = services.transcribe(vid, api_title, url, on_segment=on_seg)
+    try:
+        data = services.transcribe(vid, api_title, url, on_segment=on_seg)
+    except Exception as e:
+        # 转写失败不崩溃：标记失败，让批量继续下一个
+        print(f"  ⚠️ 转写失败: {str(e)[:120]}", flush=True)
+        write_status(video_id=vid, status="failed", title=api_title, progress="转写失败", percent=0)
+        write_event({"type": "video_failed", "video_id": vid, "title": api_title,
+                     "reason": f"转写失败: {str(e)[:80]}"})
+        live_update(step="failed")
+        return False
     _t_trans = round(time.time() - _t_trans_start, 1)
     live_update(title=api_title, duration=data["duration"],
                 full_text=data["full_text"], segments=data["segments"], step="rewriting")
@@ -224,6 +235,12 @@ def process_one(vid, title, url, modules=None):
             })
         _done_times["stats"] = round(time.time() - _s_t0, 1)
         return out
+
+    def _stats_placeholder():
+        return {"like": "-", "comment": "-", "collect": "-", "share": "-",
+                "play": "-", "channel_name": "", "channel_id": "",
+                "fans": "-", "following": "-", "total_likes": "-", "works": "-",
+                "nickname": ""}
     def _vision():
         # 画面分析（mimo-v2.5 视觉，每5秒一帧）——失败不阻塞主流程
         try:
@@ -248,20 +265,17 @@ def process_one(vid, title, url, modules=None):
 
     with ThreadPoolExecutor(max_workers=6) as ex:
         f_polish = ex.submit(_polish) if use_rewrite else None
-        f_versions = ex.submit(_versions) if use_versions else None
         f_analyze = ex.submit(_analyze) if use_analysis else None
-        f_stats = ex.submit(_stats)
         f_vision = ex.submit(_vision) if use_vision else None
         rw = f_polish.result() if f_polish else []
         _done_times["polish"] = round(time.time() - _t_start, 1) if use_rewrite else 0
-        if use_versions:
-            write_status(video_id=vid, status="rewriting", progress="生成仿写版本", percent=65, stage="versions_gen")
-        versions = f_versions.result() if f_versions else {}
+        versions = {}
         if use_analysis:
             write_status(video_id=vid, status="rewriting", progress="AI 分析中", percent=75, stage="analysis_gen")
         analysis = f_analyze.result() if f_analyze else {}
         prompt = ""  # 复刻提示词模块已移除
-        stats = f_stats.result()
+        # 互动数据不阻塞主流程：先占位，后台抓完再回写
+        stats = _stats_placeholder()
         _live["stats"] = stats
         write_live()
         if f_vision:
@@ -272,22 +286,29 @@ def process_one(vid, title, url, modules=None):
         _live["vision"] = vision
         live_update(step="finalizing")
 
-    # 实时事件：分析 / 多版本 / 提示词 / 互动数据 完成推送（带各阶段耗时）
+    # 实时事件：分析 / 多版本 / 提示词 完成推送（带各阶段耗时）
     write_event({"type": "polish_done", "video_id": vid, "time": _done_times.get("polish", 0)})
     write_event({"type": "analysis_done", "video_id": vid, "analysis": analysis,
                  "time": _done_times.get("analysis", 0)})
-    write_event({"type": "versions_done", "video_id": vid, "versions": versions,
-                 "time": _done_times.get("versions", 0)})
+    # 互动数据异步抓取：先发占位事件，后台抓完再发真实数据
     write_event({"type": "stats_done", "video_id": vid, "stats": stats,
-                 "time": _done_times.get("stats", 0)})
+                 "time": 0, "pending": True})
 
-    rw_data = {"video_id": vid, "title": api_title, "url": url, "duration": data["duration"],
+    # source_url = 用户粘贴的原始链接（原样保存，不改写）
+    # canonical_url = 实际用于下载的规范链接
+    source_url = url
+    canonical_url = f"https://www.douyin.com/video/{vid}"
+    rw_data = {"video_id": vid, "title": api_title, "url": source_url,
+               "source_url": source_url, "canonical_url": canonical_url,
+               "duration": data["duration"],
                "segments": rw, "versions": versions, "analysis": analysis, "prompt": prompt,
                "stats": stats, "vision": vision}
     with open(os.path.join(OUTPUT_DIR, "rewritten", f"{vid}.json"), "w", encoding="utf-8") as f:
         json.dump(rw_data, f, ensure_ascii=False, indent=2)
     report = {
-        "video_id": vid, "title": api_title, "url": url, "duration": data["duration"],
+        "video_id": vid, "title": api_title, "url": source_url,
+        "source_url": source_url, "canonical_url": canonical_url,
+        "duration": data["duration"],
         "language": data["language"], "original_segments": data["segments"],
         "full_text": data["full_text"], "rewritten_segments": rw,
         "versions": versions, "analysis": analysis, "prompt": prompt,
@@ -325,6 +346,30 @@ def process_one(vid, title, url, modules=None):
             print(f"  [FEISHU] Export success", flush=True)
     except Exception as e:
         print(f"  [FEISHU] Export failed: {str(e)[:80]}", flush=True)
+
+    # 互动数据异步回填：不阻塞主流程，抓完后写回报告 + 刷新前端
+    def _fill_stats_async():
+        try:
+            real_stats = _stats()
+            # 更新 live
+            _live["stats"] = real_stats
+            write_live()
+            write_event({"type": "stats_done", "video_id": vid, "stats": real_stats,
+                         "time": _done_times.get("stats", 0), "pending": False})
+            # 回写报告文件
+            try:
+                _rf = os.path.join(OUTPUT_DIR, "reports", f"{vid}.json")
+                if os.path.exists(_rf):
+                    _rep = json.load(open(_rf, encoding="utf-8"))
+                    _rep["stats"] = real_stats
+                    with open(_rf, "w", encoding="utf-8") as _f:
+                        json.dump(_rep, _f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"  ⚠️ 互动数据抓取失败: {str(e)[:80]}", flush=True)
+
+    _threading.Thread(target=_fill_stats_async, daemon=True).start()
 
     return True
 
@@ -371,6 +416,9 @@ def _maybe_clear_key():
         v = cfg.get("vision", {})
         if isinstance(v, dict):
             v["key"] = ""
+        a = cfg.get("asr", {})
+        if isinstance(a, dict):
+            a["key"] = ""
         app_config.save_config(cfg)
         print("已清除 API Key（未勾选长期保存，下次需重新填写）", flush=True)
     except Exception as e:
@@ -435,8 +483,9 @@ def run_author(url, count, modules=None):
     write_status(state="running", message="抓取主页视频清单...")
     # 抓清单：多抓 count*3 个候选，供作者过滤（主页可能混入推荐视频）
     if getattr(sys, "frozen", False):
-        _cli = os.path.join(os.path.dirname(sys.executable), "fetch_author_cli.exe")
-        r = subprocess.run([_cli, url, str(count * 5)], capture_output=True, timeout=180)
+        # 单文件 exe：自身即为分发入口，用 --fetch-author 子命令
+        r = subprocess.run([sys.executable, "--fetch-author", url, str(count * 5)],
+                           capture_output=True, timeout=180)
     else:
         _cli_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fetch_author_cli.py")
         r = subprocess.run([sys.executable, _cli_py, url, str(count * 5)], capture_output=True, timeout=180)
@@ -505,7 +554,15 @@ def run_author(url, count, modules=None):
             continue
         write_event({"type": "batch_progress", "video_id": vid, "index": i + 1,
                      "total": total, "title": v["title"]})
-        ok = process_one(vid, v["title"], v["url"], modules=modules)
+        try:
+            ok = process_one(vid, v["title"], v["url"], modules=modules)
+        except Exception as e:
+            # 双保险：任何单视频异常都不拖垮整个批量
+            print(f"  ⚠️ 视频处理异常: {str(e)[:120]}", flush=True)
+            write_status(video_id=vid, status="failed", title=v["title"], progress="处理异常", percent=0)
+            write_event({"type": "batch_progress", "video_id": vid, "index": i + 1,
+                         "total": total, "title": v["title"], "failed": True})
+            ok = False
         write_status(message=f"[{i+1}/{total}] {v['title'][:20]}... {'完成' if ok else '失败'}")
     write_status(state="done", message=f"全部 {total} 个视频处理完成")
     _maybe_clear_key()
@@ -518,13 +575,18 @@ def run_local(file_path, title):
     write_status(video_id=vid, status="transcribing", title=title, progress="转写中", percent=30)
     wav = os.path.join(OUTPUT_DIR, "uploads", f"{vid}.wav")
     import subprocess
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", file_path, "-ar", "16000", "-ac", "1", wav],
+    _ff = "ffmpeg"
+    for _d in (getattr(sys, "_MEIPASS", ""), BASE):
+        _p = os.path.join(_d, "ffmpeg.exe") if _d else ""
+        if _p and os.path.exists(_p):
+            _ff = _p
+            break
+    subprocess.run([_ff, "-y", "-v", "error", "-i", file_path, "-ar", "16000", "-ac", "1", wav],
                    check=True, timeout=300)
     data = services.transcribe_local(wav, vid, title)
     write_status(video_id=vid, status="rewriting", progress="润色改写中", percent=55, duration=data["duration"])
     rw = services.rewrite_segments(data["segments"])
-    write_status(video_id=vid, status="rewriting", progress="生成仿写版本", percent=70)
-    versions = services.rewrite_versions(data["full_text"])
+    versions = {}
     write_status(video_id=vid, status="rewriting", progress="AI 分析中", percent=85)
     analysis = services.analyze(data["full_text"])
     prompt = ""  # 复刻提示词模块已移除
@@ -543,19 +605,24 @@ def run_local(file_path, title):
     print("DONE local", vid, flush=True)
 
 
-if __name__ == "__main__":
-    mode = sys.argv[1]
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    mode = argv[0]
 
     def _mods(i):
         """解析生成模块勾选（JSON dict）"""
         try:
-            return json.loads(sys.argv[i]) if len(sys.argv) > i else None
+            return json.loads(argv[i]) if len(argv) > i else None
         except Exception:
             return None
 
     if mode == "single":
-        run_single(sys.argv[2], _mods(3))
+        run_single(argv[1], _mods(2))
     elif mode == "author":
-        run_author(sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 5, _mods(4))
+        run_author(argv[1], int(argv[2]) if len(argv) > 2 else 5, _mods(3))
     elif mode == "local":
-        run_local(sys.argv[2], sys.argv[3])
+        run_local(argv[1], argv[2])
+
+
+if __name__ == "__main__":
+    main()
