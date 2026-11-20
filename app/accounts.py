@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """多账号管理：每个账号独立 Chrome profile + cookies，长期保存，可切换。
-- 账号目录: accounts/<名称>/profile（浏览器登录态）+ cookies.txt（yt-dlp/API 用）
+- 账号目录: accounts/<名称>/profile（浏览器登录态）+ cookies.txt（接口备用）
 - 活跃账号: accounts/active.json
 - 兼容旧版：BASE/chrome_profile + BASE/cookies.txt 视为「default」账号
 """

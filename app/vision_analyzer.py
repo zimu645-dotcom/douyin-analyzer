@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""视频画面分析（mimo-v2.5 视觉）：下载视频流 → ffmpeg 每5秒抽帧 → 视觉模型分析
-输出: [{time, image_path, analysis}]
+"""视频画面分析（MiMo 视觉）：无头抓取视频流 → 飞书托管 URL → 整段视频直发 MiMo 分析
+输出: [{time, image, analysis}]
 """
 import os, sys, json, base64, subprocess, io, time, urllib.request
 
@@ -496,82 +496,6 @@ def analyze_video(video_id, duration):
         results.append(item)
         # 每段完成即推送（前端用最终文本替换流式片段）
         _write_event({"type": "vision_frame", "video_id": video_id, "frame": item})
-    return results
-
-
-def analyze_video_frames_legacy(video_id, duration):
-    """旧版：下载视频 + 每 N 秒抽帧 + 逐帧分析（保留备用，默认不调用）
-    返回 [{time, image, analysis}]（最多 N 帧）
-    """
-    frames_dir = os.path.join(OUTPUT_DIR, "frames", video_id)
-    os.makedirs(frames_dir, exist_ok=True)
-
-    # 1. 下载完整视频（yt-dlp -f b，不转音频）
-    vid_path = os.path.join(OUTPUT_DIR, "video_tmp", f"{video_id}.mp4")
-    os.makedirs(os.path.dirname(vid_path), exist_ok=True)
-    # 定位 yt-dlp：优先 venv Scripts（不依赖 PATH），否则系统 PATH
-    import shutil as _shutil
-    _yt = os.path.join(BASE, "venv", "Scripts", "yt-dlp.exe")
-    if not os.path.exists(_yt):
-        _yt = _shutil.which("yt-dlp") or "yt-dlp"
-    r = subprocess.run(
-        [_yt, "--cookies", COOKIES, "--no-playlist", "-f", "b",
-         "-o", vid_path, "--no-warnings", "--quiet",
-         f"https://www.douyin.com/video/{video_id}"],
-        capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
-    if r.returncode != 0 or not os.path.exists(vid_path) or os.path.getsize(vid_path) < 10000:
-        return [{"time": 0, "image": "", "analysis": "(视频下载失败，无法画面分析)"}]
-
-    # 2. 按配置抽帧（读取 config.json 的 vision.frame_interval / max_frames）
-    vconf = _get_vision_conf() or {}
-    try:
-        frame_interval = int(vconf.get("frame_interval") or 5)
-    except (TypeError, ValueError):
-        frame_interval = 5
-    try:
-        max_frames = int(vconf.get("max_frames") or 12)
-    except (TypeError, ValueError):
-        max_frames = 12
-    times = []
-    t = 0
-    while t < (duration or 60) and len(times) < max_frames:
-        times.append(t)
-        t += frame_interval
-
-    results = []
-    # 优先用项目内自带 ffmpeg（项目根 或 app 目录），否则系统 PATH
-    _ffmpeg = ""
-    for _d in (BASE, os.path.join(BASE, "app")):
-        _p = os.path.join(_d, "ffmpeg.exe")
-        if os.path.exists(_p):
-            _ffmpeg = _p
-            break
-    if not _ffmpeg:
-        _ffmpeg = "ffmpeg"
-    for i, t in enumerate(times):
-        img = os.path.join(frames_dir, f"frame_{i:02d}_{t:03d}s.jpg")
-        fr = subprocess.run(
-            [_ffmpeg, "-y", "-v", "error", "-ss", str(t), "-i", vid_path,
-             "-frames:v", "1", "-q:v", "3", img],
-            capture_output=True, timeout=60)
-        if fr.returncode == 0 and os.path.exists(img) and os.path.getsize(img) > 500:
-            analysis = analyze_frame(img)
-            # image 存相对 URL（前端可访问）
-            img_url = f"/api/frame/{video_id}/{os.path.basename(img)}"
-            results.append({"time": t, "image": img_url, "analysis": analysis})
-            # 实时写事件（SSE 用）
-            _write_event({
-                "type": "vision_frame", "video_id": video_id,
-                "frame": {"time": t, "image": img_url, "analysis": analysis},
-            })
-        # 帧间小延迟，避免限流
-        time.sleep(0.5)
-
-    # 清理视频临时文件
-    try:
-        os.remove(vid_path)
-    except OSError:
-        pass
     return results
 
 

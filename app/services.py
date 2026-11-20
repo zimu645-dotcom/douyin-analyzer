@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""服务模块：下载 / 转写 / 改写 / 分析（供 FastAPI 调用）
-所有路径基于独立环境 hermes-tools/whisper
-"""
+"""服务模块：下载 / 转写 / 改写 / 分析（供 FastAPI 调用）"""
 import os, sys, json, time, subprocess, glob, urllib.request, socket
 
 from _paths import BASE, OUTPUT_DIR
@@ -26,48 +24,7 @@ def set_progress(state=None, message=None, video_id=None, **fields):
         PROGRESS["videos"][video_id].update(fields)
     PROGRESS["updated"] = time.time()
 
-# ---------------- 1. 下载（yt-dlp） ----------------
-def _decode_output(raw_bytes):
-    """智能解码 yt-dlp 输出：尝试 UTF-8 → GBK → GB18030 → Latin-1"""
-    if not raw_bytes:
-        return ""
-    # 优先尝试 UTF-8（无错误模式）
-    try:
-        return raw_bytes.decode("utf-8")
-    except UnicodeDecodeError:
-        pass
-    # 尝试 GBK（Windows 中文环境常用）
-    try:
-        return raw_bytes.decode("gbk")
-    except UnicodeDecodeError:
-        pass
-    # 尝试 GB18030（GBK 超集，覆盖更多字符）
-    try:
-        return raw_bytes.decode("gb18030")
-    except UnicodeDecodeError:
-        pass
-    # 最后兜底：Latin-1（不会失败，但可能乱码）
-    return raw_bytes.decode("latin-1", errors="replace")
-
-
-def _ytdlp_path():
-    """定位 yt-dlp 可执行文件：优先 venv Scripts（自包含，不依赖 PATH），否则系统 PATH"""
-    import shutil as _shutil
-    p = os.path.join(BASE, "venv", "Scripts", "yt-dlp.exe")
-    if os.path.exists(p):
-        return p
-    found = _shutil.which("yt-dlp")
-    return found if found else "yt-dlp"
-
-
-def _ffmpeg_location():
-    """定位 ffmpeg 目录：项目根 或 app 目录（ffmpeg.exe 随项目携带，最稳），否则 None（走系统 PATH）"""
-    for d in (BASE, os.path.join(BASE, "app")):
-        if os.path.exists(os.path.join(d, "ffmpeg.exe")):
-            return d
-    return None
-
-
+# ---------------- 1. 下载（无头浏览器抓音频流） ----------------
 def _ffmpeg_exe():
     for d in (getattr(sys, "_MEIPASS", ""), BASE, os.path.join(BASE, "app")):
         p = os.path.join(d, "ffmpeg.exe") if d else ""
@@ -357,7 +314,7 @@ def download_audio(video_id, title_hint=""):
         return True, title_hint, 0
     return _download_audio_browser(video_id, title_hint)
 
-# ---------------- 2. 转写（仅云端：硅基流动 SenseVoice，已移除本地 faster-whisper） ----------------
+# ---------------- 2. 转写（云端：硅基流动 SenseVoice） ----------------
 
 
 # ---------------- 2.5 云端转写（硅基流动 SenseVoice / TeleSpeechASR） ----------------
@@ -417,8 +374,8 @@ def _save_transcript(data):
 
 
 def _cloud_transcribe(audio_path, video_id, title, url, on_segment=None):
-    """硅基流动云端转写 → 与本地 faster-whisper 相同的数据结构
-    失败抛异常（上层回退本地模型）"""
+    """硅基流动云端转写，返回与前端/报告兼容的数据结构
+    失败抛异常（带具体原因，重试耗尽后向上层传递）"""
     conf = _asr_conf()
     key = (conf.get("key") or "").strip()
     base = (conf.get("base_url") or "https://api.siliconflow.cn/v1/audio/transcriptions").strip()
@@ -707,44 +664,6 @@ def rewrite_segments(segments, batch_size=20, max_workers=3, on_batch=None):
             all_out.extend(batch_out)
     return all_out
 
-ALL_VERSIONS_PROMPT = """你是短视频脚本创作专家。给定一个视频的转写全文，一次性生成以下内容，用明确的标记分隔：
-
-【口播版】改写成真人口播脚本，语气亲切像朋友分享，适合 30-60 秒口播视频，有明确行动指引结尾
-【变体版】改写成生活方式Vlog风格的旁白脚本，弱化推销感，强化沉浸式日常记录与情绪价值
-【原结构复刻版】完全复刻原视频的结构节奏（钩子-信任-卖点-收尾），但换一套全新的表达方式
-【开头钩子备选】6 个不同风格的开头钩子（30字以内）：①反常识预警 ②痛点直击 ③结果前置 ④好奇悬念 ⑤数据信任 ⑥场景代入，每行一条
-
-要求：严格保留原视频核心卖点、信息点、结构逻辑；每个版本用【名称】开头。直接输出，不要其他内容。
-
-转写全文：
-{full_text}"""
-
-
-def rewrite_versions(full_text, stream=False, on_token=None):
-    """生成多版本改写：一次 API 调用输出 3 版本 + 钩子备选（支持流式）"""
-    versions = {}
-    try:
-        raw = llm_chat(ALL_VERSIONS_PROMPT.format(full_text=full_text), "请生成",
-                       max_tokens=3000, temperature=0.8, stream=stream, on_token=on_token)
-        # 按标记切分
-        import re
-        parts = re.split(r"【(.+?)】", raw)
-        # parts: ['', '口播版', 内容, '变体版', 内容, ...]
-        for i in range(1, len(parts) - 1, 2):
-            name = parts[i].strip()
-            content = parts[i + 1].strip()
-            if name == "开头钩子备选":
-                hooks = [h for h in content.splitlines() if h.strip()]
-                # 去掉序号前缀
-                hooks = [re.sub(r"^[①②③④⑤⑥]\s*", "", h).strip() for h in hooks]
-                versions[name] = hooks
-            elif name:
-                versions[name] = content
-        time.sleep(0.2)  # 流式优化：减少等待延时（1.5s→0.2s），token 已实时推送
-    except Exception as e:
-        versions["口播版"] = f"(生成失败: {e})"
-    return versions
-
 # ---------------- 4. 文本层分析 ----------------
 ANALYZE_PROMPT = """你是短视频内容分析专家。给定视频转写全文，输出结构化分析（JSON格式，不要markdown代码块）：
 {{
@@ -776,20 +695,8 @@ def analyze(full_text, stream=False, on_token=None):
         time.sleep(1)
     return {"summary": "", "scenes": "", "structure": "", "highlights": [], "improvements": []}
 
-# ---------------- 5. 复刻提示词 ----------------
-PROMPT_GEN = """你是视频创作提示词专家。根据以下视频转写全文，生成一条可直接用于 AI 视频生成工具的完整提示词
-（描述画面风格、场景、镜头语言、声音设计、节奏，200-300字，中文）：
-{full_text}"""
-
-def gen_prompt(full_text, stream=False, on_token=None):
-    try:
-        return llm_chat(PROMPT_GEN.format(full_text=full_text), "请生成", max_tokens=1000,
-                        stream=stream, on_token=on_token)
-    except Exception:
-        return ""
-
 def transcribe_local(wav_path, video_id, title):
-    """本地音频上传转写 → transcripts/<id>.json（走云端，已移除本地 faster-whisper）"""
+    """本地音频上传转写 → transcripts/<id>.json（走云端）"""
     if not _use_cloud_asr():
         raise RuntimeError("未配置云端转写（硅基流动），请在设置中填写 ASR API Key")
     return _cloud_transcribe(wav_path, video_id, title, "(本地文件)")

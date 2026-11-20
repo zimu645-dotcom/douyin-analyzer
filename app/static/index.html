@@ -376,7 +376,7 @@ td { padding: 9px 12px; border: 1px solid var(--border); vertical-align: top; li
         <h4>🛡 改写引擎（兜底）</h4>
         <div class="cfg-row"><label>服务商</label><input id="cfg-f-provider" placeholder="mimo"></div>
         <div class="cfg-row"><label>Base URL</label><input id="cfg-f-url" placeholder="https://api.xiaomimimo.com/v1/chat/completions"></div>
-        <div class="cfg-row"><label>模型名</label><input id="cfg-f-model" list="model-list-mimo" placeholder="mimo-v2.5" style="flex:1">
+        <div class="cfg-row"><label>模型名</label><input id="cfg-f-model" list="model-list-mimo" placeholder="mimo-v2.6-flash" style="flex:1">
           <datalist id="model-list-mimo">
             <option value="mimo-v2.6-flash"><option value="mimo-v2.6-pro">
           </datalist></div>
@@ -396,8 +396,7 @@ td { padding: 9px 12px; border: 1px solid var(--border); vertical-align: top; li
         <h4>🎙 语音转写引擎</h4>
         <div class="cfg-row"><label>转写方式</label>
           <select id="cfg-a-engine" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:#fff">
-            <option value="cloud">☁️ 云端转写（硅基流动 · 免下载模型 · 推荐）</option>
-            <option value="local">💻 本地 faster-whisper（需下载模型）</option>
+            <option value="cloud">☁️ 云端转写（硅基流动 · SenseVoiceSmall）</option>
           </select>
         </div>
         <div class="cfg-row"><label>Base URL</label><input id="cfg-a-url" placeholder="https://api.siliconflow.cn/v1/audio/transcriptions"></div>
@@ -406,7 +405,7 @@ td { padding: 9px 12px; border: 1px solid var(--border); vertical-align: top; li
             <option value="FunAudioLLM/SenseVoiceSmall"><option value="TeleAI/TeleSpeechASR">
           </datalist></div>
         <div class="cfg-row"><label>API Key</label><input id="cfg-a-keyfile" type="password" placeholder="sk-xxx（留空则不修改）" autocomplete="off"></div>
-        <div class="cfg-tip">云端转写用硅基流动：<a href="https://cloud.siliconflow.cn" target="_blank">cloud.siliconflow.cn</a> 注册拿 Key，SenseVoiceSmall 免费且中文效果好，音频限制：单文件 ≤50MB / ≤1小时。云端失败自动回退本地模型（如已安装）。</div>
+        <div class="cfg-tip">云端转写用硅基流动：<a href="https://cloud.siliconflow.cn" target="_blank">cloud.siliconflow.cn</a> 注册拿 Key，SenseVoiceSmall 免费且中文效果好，音频限制：单文件 ≤50MB / ≤1小时。</div>
       </div>
       <div class="cfg-section">
         <h4>👤 抖音账号</h4>

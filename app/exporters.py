@@ -299,55 +299,56 @@ def to_excel(report, path):
     if r - 1 >= 3:
         ws2.auto_filter.ref = f"A2:D{r - 1}"
 
-    # ---- Sheet3: 多版本仿写（色块区分） ----
-    ws3 = wb.create_sheet("多版本仿写")
-    ws3.merge_cells("A1:B1")
-    c = ws3.cell(row=1, column=1, value="🎭 多版本仿写脚本")
-    _apply_font(c, size=14, bold=True, color="FFFFFF")
-    _apply_fill(c, _CLR_BG_COVER)
-    _apply_align(c, h="center", v="center")
-    ws3.row_dimensions[1].height = 40
-    for col in range(1, 3):
-        _apply_fill(ws3.cell(row=1, column=col), _CLR_BG_COVER)
-
-    r = 3
-    for name, text in (report.get("versions") or {}).items():
-        # 版本标题行（色块）
-        title_clr, bg_clr = _VERSION_COLORS.get(name, (_CLR_PURPLE, "F3E8FF"))
-        ws3.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
-        c = ws3.cell(row=r, column=1, value=f"📝 {name}")
-        _apply_font(c, size=12, bold=True, color="FFFFFF")
-        _apply_fill(c, title_clr)
-        _apply_align(c, h="left", v="center")
-        _apply_border(c, title_clr)
+    # ---- Sheet3: 多版本仿写（数据源已移除，仅有旧报告数据时才生成） ----
+    if report.get("versions"):
+        ws3 = wb.create_sheet("多版本仿写")
+        ws3.merge_cells("A1:B1")
+        c = ws3.cell(row=1, column=1, value="🎭 多版本仿写脚本")
+        _apply_font(c, size=14, bold=True, color="FFFFFF")
+        _apply_fill(c, _CLR_BG_COVER)
+        _apply_align(c, h="center", v="center")
+        ws3.row_dimensions[1].height = 40
         for col in range(1, 3):
-            _apply_fill(ws3.cell(row=r, column=col), title_clr)
-            _apply_border(ws3.cell(row=r, column=col), title_clr)
-        ws3.row_dimensions[r].height = 32
-        r += 1
+            _apply_fill(ws3.cell(row=1, column=col), _CLR_BG_COVER)
 
-        # 内容行
-        content = "\n".join(text) if isinstance(text, list) else str(text)
-        ws3.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
-        c = ws3.cell(row=r, column=1, value=content)
-        _apply_font(c, size=10)
-        _apply_fill(c, bg_clr)
-        _apply_align(c)
-        _apply_border(c)
-        for col in range(1, 3):
-            _apply_fill(ws3.cell(row=r, column=col), bg_clr)
-            _apply_border(ws3.cell(row=r, column=col))
-        ws3.row_dimensions[r].height = max(50, 16 * (len(content) // 50 + 1))
-        r += 1
+        r = 3
+        for name, text in (report.get("versions") or {}).items():
+            # 版本标题行（色块）
+            title_clr, bg_clr = _VERSION_COLORS.get(name, (_CLR_PURPLE, "F3E8FF"))
+            ws3.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
+            c = ws3.cell(row=r, column=1, value=f"📝 {name}")
+            _apply_font(c, size=12, bold=True, color="FFFFFF")
+            _apply_fill(c, title_clr)
+            _apply_align(c, h="left", v="center")
+            _apply_border(c, title_clr)
+            for col in range(1, 3):
+                _apply_fill(ws3.cell(row=r, column=col), title_clr)
+                _apply_border(ws3.cell(row=r, column=col), title_clr)
+            ws3.row_dimensions[r].height = 32
+            r += 1
 
-    _set_col_widths(ws3, [18, 90])
+            # 内容行
+            content = "\n".join(text) if isinstance(text, list) else str(text)
+            ws3.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
+            c = ws3.cell(row=r, column=1, value=content)
+            _apply_font(c, size=10)
+            _apply_fill(c, bg_clr)
+            _apply_align(c)
+            _apply_border(c)
+            for col in range(1, 3):
+                _apply_fill(ws3.cell(row=r, column=col), bg_clr)
+                _apply_border(ws3.cell(row=r, column=col))
+            ws3.row_dimensions[r].height = max(50, 16 * (len(content) // 50 + 1))
+            r += 1
+
+        _set_col_widths(ws3, [18, 90])
 
     # ---- Sheet4: 画面分析（含缩略图） ----
     vision = report.get("vision") or []
     if vision:
         ws4 = wb.create_sheet("画面分析")
         ws4.merge_cells("A1:C1")
-        c = ws4.cell(row=1, column=1, value="🎬 画面分析（每5秒抽帧）")
+        c = ws4.cell(row=1, column=1, value="🎬 画面分析（整段视频理解）")
         _apply_font(c, size=14, bold=True, color="FFFFFF")
         _apply_fill(c, _CLR_PURPLE)
         _apply_align(c, h="center", v="center")

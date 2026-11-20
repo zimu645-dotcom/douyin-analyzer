@@ -69,7 +69,6 @@ PROGRESS_MAP = {
     "downloading": 5,
     "transcribing": 20,
     "rewriting": 50,
-    "versions_gen": 65,
     "analysis_gen": 75,
     "vision_gen": 85,
     "video_done": 100,
@@ -106,7 +105,7 @@ services.set_progress = lambda state=None, message=None, video_id=None, **f: wri
 
 def process_one(vid, title, url, modules=None):
     """下载→转写→改写→分析→报告（含互动数据抓取，改写阶段并发加速）
-    modules: 生成模块勾选 {analysis, rewrite, versions, vision}，未勾选的跳过生成"""
+    modules: 生成模块勾选 {analysis, rewrite, vision}，未勾选的跳过生成"""
     from concurrent.futures import ThreadPoolExecutor
     import fetch_stats
     modules = modules or {}
@@ -128,7 +127,7 @@ def process_one(vid, title, url, modules=None):
         live_update(step="failed")
         return False
 
-    # 抓互动数据（yt-dlp，与转写并行）
+    # 互动数据抓取（与转写并行）
     write_status(video_id=vid, status="transcribing", title=api_title, progress="转写中", percent=20, stage="transcribing")
     write_event({"type": "video_start", "video_id": vid, "title": api_title,
                  "url": url, "source_url": url,
@@ -184,22 +183,6 @@ def process_one(vid, title, url, modules=None):
             write_event({"type": "rewrite_batch", "video_id": vid,
                          "segments": batch_out})
         return services.rewrite_segments(data["segments"], on_batch=on_batch)
-    def _versions():
-        # 流式：token 逐段推送（打字机效果）
-        _v_t0 = time.time()
-        _ver_buf = []
-        def on_tok(tok):
-            _ver_buf.append(tok)
-            # 每 20 个 token 更新一次 live（减少磁盘写入频率）
-            if len(_ver_buf) % 20 == 0:
-                _live["versions"] = {"text": "".join(_ver_buf)}
-                write_live()
-            write_event({"type": "versions_token", "video_id": vid, "tok": tok})
-        result = services.rewrite_versions(data["full_text"], stream=True, on_token=on_tok)
-        _live["versions"] = result if isinstance(result, dict) else {"text": "".join(_ver_buf) or str(result)}
-        _done_times["versions"] = round(time.time() - _v_t0, 1)
-        write_live()
-        return result
     def _analyze():
         _a_t0 = time.time()
         _ana_buf = []
@@ -242,7 +225,7 @@ def process_one(vid, title, url, modules=None):
                 "fans": "-", "following": "-", "total_likes": "-", "works": "-",
                 "nickname": ""}
     def _vision():
-        # 画面分析（mimo-v2.5 视觉，每5秒一帧）——失败不阻塞主流程
+        # 画面分析（MiMo 视觉，整段视频 URL 分析）——失败不阻塞主流程
         try:
             import vision_analyzer
             return vision_analyzer.analyze_video(vid, data.get("duration", 30))
@@ -273,7 +256,7 @@ def process_one(vid, title, url, modules=None):
         if use_analysis:
             write_status(video_id=vid, status="rewriting", progress="AI 分析中", percent=75, stage="analysis_gen")
         analysis = f_analyze.result() if f_analyze else {}
-        prompt = ""  # 复刻提示词模块已移除
+        prompt = ""
         # 互动数据不阻塞主流程：先占位，后台抓完再回写
         stats = _stats_placeholder()
         _live["stats"] = stats
@@ -589,7 +572,7 @@ def run_local(file_path, title):
     versions = {}
     write_status(video_id=vid, status="rewriting", progress="AI 分析中", percent=85)
     analysis = services.analyze(data["full_text"])
-    prompt = ""  # 复刻提示词模块已移除
+    prompt = ""
     report = {
         "video_id": vid, "title": title, "url": "(本地文件)", "duration": data["duration"],
         "language": data["language"], "original_segments": data["segments"],

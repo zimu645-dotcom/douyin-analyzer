@@ -8,11 +8,6 @@ from pathlib import Path
 from _paths import BASE
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# CUDA 库路径（faster-whisper GPU 需要）
-_cublas = os.path.join(BASE, "venv", "Lib", "site-packages", "nvidia", "cublas", "bin")
-if os.path.isdir(_cublas) and _cublas not in os.environ.get("PATH", ""):
-    os.environ["PATH"] = _cublas + os.pathsep + os.environ.get("PATH", "")
-
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -148,12 +143,12 @@ def api_stop():
 class AuthorJob(BaseModel):
     url: str
     count: int = 5
-    modules: dict = {}   # 生成模块勾选 {analysis, rewrite, versions, vision}
+    modules: dict = {}   # 生成模块勾选 {analysis, rewrite, vision}
 
 
 class SingleJob(BaseModel):
     url: str
-    modules: dict = {}   # 生成模块勾选 {analysis, rewrite, versions, vision}
+    modules: dict = {}   # 生成模块勾选 {analysis, rewrite, vision}
 
 
 # ---------------- API 路由 ----------------
@@ -443,12 +438,6 @@ def api_save_config(req: dict):
                 cfg["vision"]["fps"] = max(0.1, min(10.0, float(v["fps"])))
             except (TypeError, ValueError):
                 pass
-    if "whisper" in req:
-        w = req["whisper"]
-        if "use_title_prompt" in w and w["use_title_prompt"] is not None:
-            cfg.setdefault("whisper", {})["use_title_prompt"] = bool(w["use_title_prompt"])
-        if "hotwords" in w and isinstance(w["hotwords"], list):
-            cfg.setdefault("whisper", {})["hotwords"] = [str(x).strip() for x in w["hotwords"] if str(x).strip()]
     if "asr" in req:
         a = req["asr"]
         # engine/base_url/model：非空才更新（key 留空表示不修改）

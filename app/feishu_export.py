@@ -56,7 +56,6 @@ def report_to_record(report):
     """
     stats = report.get("stats") or {}
     analysis = report.get("analysis") or {}
-    versions = report.get("versions") or {}
     vision = report.get("vision") or []
 
     # 汇总画面分析
@@ -87,14 +86,7 @@ def report_to_record(report):
         improvements_lines.append(f"• {point}: {problem} → {fix}")
     improvements_text = "\n".join(improvements_lines)
 
-    # 处理开头钩子（可能是列表）
-    hooks = versions.get("开头钩子备选") or []
-    if isinstance(hooks, list):
-        hooks_text = "\n".join(hooks)
-    else:
-        hooks_text = str(hooks)
-
-    # 处理链接字段（飞书URL格式）
+    # 链接字段（文本类型，保存用户粘贴的原链接）
     url = report.get("url") or ""
     title = report.get("title") or ""
 
@@ -113,26 +105,21 @@ def report_to_record(report):
         "fields": {
             "视频ID": _txt(report.get("video_id")),
             "标题": _txt(title),
-            "链接": url,                      # 文本类型，直接传 url 字符串
+            "链接": url,
             "时长(秒)": _safe_number(report.get("duration"), 0),
             "点赞": _safe_number(stats.get("like"), 0),
             "评论": _safe_number(stats.get("comment"), 0),
             "收藏": _safe_number(stats.get("collect"), 0),
             "转发": _safe_number(stats.get("share"), 0),
             "主播": _txt(stats.get("nickname") or stats.get("channel_name")),
-            "粉丝": _safe_number(stats.get("fans"), 0),   # 数字字段
+            "粉丝": _safe_number(stats.get("fans"), 0),
             "一句话总结": _txt(analysis.get("summary")),
             "适合场景": _txt(analysis.get("scenes")),
             "核心结构": _txt(analysis.get("structure")),
-            "口播版": _txt(versions.get("口播版")),
-            "变体版": _txt(versions.get("变体版")),
-            "原结构复刻版": _txt(versions.get("原结构复刻版")),
-            "开头钩子": _txt(hooks_text),
-            "复刻提示词": _txt(report.get("prompt")),
             "画面分析": _txt(vision_summary),
             "值得学习": _txt(highlights_text),
             "改进建议": _txt(improvements_text),
-            "分析时间": analysis_time_str,   # 文本字段，字符串
+            "分析时间": analysis_time_str,
         }
     }
 
@@ -155,16 +142,11 @@ def _ensure_fields(client, app_token, table_id):
         ("一句话总结", 1),
         ("适合场景", 1),
         ("核心结构", 1),
-        ("口播版", 1),
-        ("变体版", 1),
-        ("原结构复刻版", 1),
-        ("开头钩子", 1),
-        ("复刻提示词", 1),
         ("画面分析", 1),
         ("值得学习", 1),
         ("改进建议", 1),
-        ("分析时间", 1),  # 改为文本类型，避免日期格式问题
-        ("画面图片", 17),  # 17=附件，存储画面分析帧图
+        ("分析时间", 1),
+        ("画面图片", 17),  # 17=附件，存储画面分析图
     ]
 
     # 获取现有字段

@@ -31,14 +31,10 @@ DEFAULT_CONFIG = {
         "enabled": True,
     },
     "asr": {
-        "engine": "cloud",        # cloud = 硅基流动云端转写（免下载模型，推荐）；local = faster-whisper 本地
+        "engine": "cloud",        # 转写引擎：cloud = 硅基流动云端（SenseVoiceSmall）
         "base_url": "https://api.siliconflow.cn/v1/audio/transcriptions",
         "model": "FunAudioLLM/SenseVoiceSmall",
         "key": "",                # 硅基流动 API Key（cloud.siliconflow.cn 获取）
-    },
-    "whisper": {
-        "use_title_prompt": True,   # 用视频标题做 initial_prompt（纠正专有名词同音错）
-        "hotwords": [],             # 自定义热词（逗号分隔），如 ["罗技GPW", "3395SE"]
     },
     "feishu": {
         "app_id": "",               # 飞书应用 App ID
